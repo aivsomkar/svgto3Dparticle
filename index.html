@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SVG → 3D · forge</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+
+    <div class="stage-frame">
+      <span class="bracket tl"></span><span class="bracket tr"></span>
+      <span class="bracket bl"></span><span class="bracket br"></span>
+      <span class="tick t"></span><span class="tick b"></span>
+      <button id="reset-cam" class="reset-cam">+ RESET CAM</button>
+    </div>
+
+    <header class="topbar">
+      <div class="brand">SVG <span class="arrow">→</span> 3D</div>
+      <div class="top-center">
+        <button id="change-dim" class="chip"><span class="dot">◍</span> CHANGE DIMENSION</button>
+        <span class="chip chip-accent">particles ✦</span>
+      </div>
+      <div class="top-right">VECTOR <span class="arrow">→</span> VOLUME</div>
+    </header>
+
+    <!-- LEFT PANEL -->
+    <aside class="panel panel-left">
+      <button id="shuffle" class="ghost-btn">🎲 SHUFFLE</button>
+
+      <section class="block">
+        <div class="block-label"><i>01</i> SUBJECT</div>
+        <div class="pills" id="subject-pills"></div>
+        <label class="upload-btn">⭧ UPLOAD SVG
+          <input id="file-input" type="file" accept=".svg,image/svg+xml" hidden />
+        </label>
+        <input id="text-input" class="text-input" type="text" placeholder="or type text → 3d…" />
+      </section>
+
+      <section class="block">
+        <div class="block-label"><i>02</i> SHAPE</div>
+        <div class="slider" data-key="density"   data-min="0.05" data-max="1"   data-step="0.01" data-label="DENSITY"></div>
+        <div class="slider" data-key="depth"     data-min="0"    data-max="1.5" data-step="0.01" data-label="EXTRUDE DEPTH"></div>
+        <div class="slider" data-key="sampleRes" data-min="120"  data-max="600" data-step="10"   data-label="DETAIL"></div>
+        <div class="row toggles">
+          <button class="pill toggle-pill" data-toggle="useSvgColor">USE SVG COLORS</button>
+        </div>
+        <div class="color-row"><span class="s-label">PARTICLE COLOR</span><input type="color" class="swatch-input" data-color="uniformColor" /></div>
+      </section>
+
+      <section class="block">
+        <div class="block-label"><i>03</i> LOOK</div>
+        <div class="slider" data-key="particleSize" data-min="1" data-max="20" data-step="0.5" data-label="SIZE"></div>
+        <div class="slider" data-key="opacity" data-min="0.1" data-max="1" data-step="0.01" data-label="OPACITY"></div>
+        <div class="row toggles">
+          <button class="pill toggle-pill" data-toggle="additive">GLOW</button>
+          <button class="pill toggle-pill" data-toggle="fog">DEPTH FOG</button>
+        </div>
+        <div class="color-row"><span class="s-label">BACKGROUND</span><input type="color" class="swatch-input" data-color="background" /></div>
+      </section>
+    </aside>
+
+    <!-- RIGHT PANEL -->
+    <aside class="panel panel-right">
+      <section class="block">
+        <div class="block-label"><i>04</i> AMBIENT WAVE
+          <button class="pill mini toggle-pill inline" data-toggle="ambientWave">ON</button>
+        </div>
+        <div class="slider" data-key="idleAmp"   data-min="0"   data-max="0.6" data-step="0.01" data-label="AMPLITUDE"></div>
+        <div class="slider" data-key="idleFreq"  data-min="0.5" data-max="10"  data-step="0.1"  data-label="FREQUENCY"></div>
+        <div class="slider" data-key="idleSpeed" data-min="0"   data-max="4"   data-step="0.05" data-label="SPEED"></div>
+      </section>
+
+      <section class="block">
+        <div class="block-label"><i>05</i> ROTATION
+          <button class="pill mini toggle-pill inline" data-toggle="autoRotate">ON</button>
+        </div>
+        <div class="slider" data-key="rotateSpeed" data-min="-2" data-max="2" data-step="0.01" data-label="SPEED"></div>
+        <div class="slider" data-key="tilt" data-min="-1.2" data-max="1.2" data-step="0.01" data-label="TILT"></div>
+      </section>
+
+      <section class="block">
+        <div class="block-label"><i>06</i> CURSOR WAVE
+          <button class="pill mini toggle-pill inline" data-toggle="cursorWave">ON</button>
+        </div>
+        <div class="slider" data-key="waveAmp" data-min="0" data-max="1.5" data-step="0.01" data-label="AMPLITUDE"></div>
+        <div class="slider" data-key="waveFreq" data-min="2" data-max="40" data-step="0.5" data-label="FREQUENCY"></div>
+        <div class="slider" data-key="waveSpeed" data-min="0" data-max="20" data-step="0.5" data-label="RIPPLE SPEED"></div>
+        <div class="slider" data-key="cursorRadius" data-min="0.1" data-max="1.5" data-step="0.01" data-label="REACH"></div>
+      </section>
+
+      <section class="block">
+        <div class="block-label"><i>07</i> FILM &amp; EXPORT</div>
+        <div class="slider" data-key="exportFps" data-min="10" data-max="60" data-step="1" data-label="FPS"></div>
+        <div class="slider" data-key="exportDuration" data-min="1" data-max="12" data-step="0.5" data-label="LOOP SECONDS"></div>
+        <div class="slider" data-key="exportRotations" data-min="0" data-max="4" data-step="1" data-label="ROTATIONS / LOOP"></div>
+        <div class="slider" data-key="webmSeconds" data-min="2" data-max="30" data-step="1" data-label="WEBM SECONDS"></div>
+
+        <div class="sub-label">EXPORT RES</div>
+        <div class="pills tight" id="res-pills"></div>
+        <div class="row toggles"><button class="pill mini toggle-pill" data-toggle="exportTransparent">TRANSPARENT</button></div>
+
+        <div class="sub-label">RENDER</div>
+        <div class="pills tight" id="export-pills"></div>
+        <div class="status" id="status">ready</div>
+      </section>
+    </aside>
+
+    <footer class="film">
+      <div class="film-head">
+        <span>▦ FILM STRIP</span>
+        <span class="film-meta" id="film-meta">— frames</span>
+        <button id="regen-strip" class="ghost-btn tiny">↻</button>
+      </div>
+      <div class="film-track" id="film-track"></div>
+    </footer>
+
+    <div id="drop-overlay" class="drop-overlay hidden">
+      <div class="drop-card"><div class="drop-icon">⬇</div>Drop an SVG to forge it into particles</div>
+    </div>
+
+    <div id="embed-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head"><span>EMBED CODE</span><button id="embed-close" class="ghost-btn tiny">✕</button></div>
+        <p class="modal-sub">Paste this into any webpage. Loads Three.js from a CDN and renders your shape live.</p>
+        <textarea id="embed-code" class="embed-code" readonly spellcheck="false"></textarea>
+        <div class="modal-actions">
+          <button id="embed-copy" class="pill">⧉ COPY SNIPPET</button>
+          <button id="embed-download" class="pill">⬇ DOWNLOAD .HTML</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
