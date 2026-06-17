@@ -11,6 +11,7 @@ export const vertexShader = /* glsl */ `
   uniform float uIdlePhase;     // 0..2π, loops seamlessly
   uniform float uIdleAmp;
   uniform float uIdleFreq;
+  uniform float uIdleMode;      // 0 radial · 1 horizontal · 2 vertical · 3 diagonal
 
   uniform vec3  uCursor;        // cursor position in mesh-local space
   uniform float uCursorActive;  // 0..1
@@ -32,10 +33,14 @@ export const vertexShader = /* glsl */ `
     vec3 pos = position;
 
     // --- ambient idle wave (seamless over uIdlePhase 0..2π) ---
-    float idle =
-        sin(pos.x * uIdleFreq + uIdlePhase + aRand * 6.2831)
-      + sin(pos.y * uIdleFreq * 0.9 - uIdlePhase);
-    pos.z += idle * uIdleAmp * 0.5;
+    // The wave travels along a chosen direction; displacement stays on Z.
+    float coord;
+    if (uIdleMode < 0.5)      coord = length(pos.xy);             // radial ripple
+    else if (uIdleMode < 1.5) coord = pos.x;                      // horizontal
+    else if (uIdleMode < 2.5) coord = pos.y;                      // vertical
+    else                      coord = (pos.x + pos.y) * 0.70710678; // diagonal
+    float idle = sin(coord * uIdleFreq + uIdlePhase);
+    pos.z += idle * uIdleAmp;
 
     // --- cursor ripple (depth only — never displaces along XY, so the
     //     silhouette of the original shape is preserved) ---

@@ -42,6 +42,7 @@
         <div class="block-label"><i>02</i> SHAPE</div>
         <div class="slider" data-key="density"   data-min="0.05" data-max="1"   data-step="0.01" data-label="DENSITY"></div>
         <div class="slider" data-key="depth"     data-min="0"    data-max="1.5" data-step="0.01" data-label="EXTRUDE DEPTH"></div>
+        <div class="slider" data-key="thickness" data-min="0"    data-max="1"   data-step="0.01" data-label="VOLUME FROM THICKNESS"></div>
         <div class="slider" data-key="sampleRes" data-min="120"  data-max="600" data-step="10"   data-label="DETAIL"></div>
         <div class="row toggles">
           <button class="pill toggle-pill" data-toggle="useSvgColor">USE SVG COLORS</button>
@@ -67,6 +68,8 @@
         <div class="block-label"><i>04</i> AMBIENT WAVE
           <button class="pill mini toggle-pill inline" data-toggle="ambientWave">ON</button>
         </div>
+        <div class="sub-label" style="margin-top:0">DIRECTION</div>
+        <div class="pills tight" id="wavedir-pills"></div>
         <div class="slider" data-key="idleAmp"   data-min="0"   data-max="0.6" data-step="0.01" data-label="AMPLITUDE"></div>
         <div class="slider" data-key="idleFreq"  data-min="0.5" data-max="10"  data-step="0.1"  data-label="FREQUENCY"></div>
         <div class="slider" data-key="idleSpeed" data-min="0"   data-max="4"   data-step="0.05" data-label="SPEED"></div>
@@ -106,15 +109,6 @@
         <div class="status" id="status">ready</div>
       </section>
     </aside>
-
-    <footer class="film">
-      <div class="film-head">
-        <span>▦ FILM STRIP</span>
-        <span class="film-meta" id="film-meta">— frames</span>
-        <button id="regen-strip" class="ghost-btn tiny">↻</button>
-      </div>
-      <div class="film-track" id="film-track"></div>
-    </footer>
 
     <div id="drop-overlay" class="drop-overlay hidden">
       <div class="drop-card"><div class="drop-icon">⬇</div>Drop an SVG to forge it into particles</div>

@@ -2,6 +2,7 @@ import { SHAPE_KEYS } from "./presets.js";
 
 const RES = [["512", 512], ["1024", 1024], ["2048", 2048], ["4K", 4096]];
 const EXPORTS = ["gif", "webm", "png", "embed"];
+const WAVE_DIRS = ["radial", "horizontal", "vertical", "diagonal"];
 
 function pill(text, active = false) {
   const b = document.createElement("button");
@@ -78,6 +79,20 @@ export function buildUI(config, actions) {
     colors.push({ key, el });
   });
 
+  // ---- wave direction (single-select) ------------------------------------
+  const dirEls = [];
+  WAVE_DIRS.forEach((d) => {
+    const b = pill(d.toUpperCase(), config.waveDir === d);
+    b.dataset.dir = d;
+    b.onclick = () => {
+      config.waveDir = d;
+      dirEls.forEach((e) => e.classList.toggle("active", e.dataset.dir === config.waveDir));
+      actions.change("waveDir");
+    };
+    $("wavedir-pills").appendChild(b);
+    dirEls.push(b);
+  });
+
   // ---- export res + render buttons ---------------------------------------
   const resEls = [];
   RES.forEach(([label, value]) => {
@@ -97,7 +112,6 @@ export function buildUI(config, actions) {
   $("change-dim").onclick = () => actions.changeDim();
   $("reset-cam").onclick = () => actions.resetCam();
   $("shuffle").onclick = () => actions.shuffle();
-  $("regen-strip").onclick = () => actions.regenStrip();
 
   // ---- embed modal -------------------------------------------------------
   $("embed-close").onclick = () => $("embed-modal").classList.add("hidden");
@@ -108,9 +122,8 @@ export function buildUI(config, actions) {
   };
   $("embed-download").onclick = () => actions.downloadEmbed();
 
-  // ---- status + film helpers ---------------------------------------------
+  // ---- status ------------------------------------------------------------
   const setStatus = (m) => ($("status").textContent = m);
-  const track = $("film-track");
 
   function sync() {
     subjEls.forEach((e) => e.classList.toggle("active", e.dataset.key === config.subject));
@@ -118,15 +131,13 @@ export function buildUI(config, actions) {
     toggles.forEach((t) => t.el.classList.toggle("active", !!config[t.key]));
     colors.forEach((c) => (c.el.value = config[c.key]));
     resEls.forEach((e) => e.classList.toggle("active", +e.dataset.val === config.exportRes));
+    dirEls.forEach((e) => e.classList.toggle("active", e.dataset.dir === config.waveDir));
   }
 
   return {
     setStatus,
     showEmbed(code) { $("embed-code").value = code; $("embed-modal").classList.remove("hidden"); },
     progress: (label) => (p) => setStatus(`${label} ${Math.min(100, Math.round(p * 100))}%`),
-    clearFilm() { track.innerHTML = ""; },
-    addFilmFrame(c) { track.appendChild(c); },
-    setFilmMeta(text) { $("film-meta").textContent = text; },
     sync,
   };
 }

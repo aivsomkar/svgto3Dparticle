@@ -39,7 +39,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
 
 /* ---------- panels ---------- */
 .panel {
-  position: fixed; top: 64px; bottom: 132px; z-index: 25;
+  position: fixed; top: 64px; bottom: 24px; z-index: 25;
   width: 300px; padding: 6px 18px 18px; overflow-y: auto;
   display: flex; flex-direction: column; gap: 22px;
   pointer-events: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent;
@@ -121,7 +121,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
 .status { margin-top: 12px; font-size: 11px; letter-spacing: 0.08em; color: var(--muted); min-height: 14px; }
 
 /* ---------- stage frame ---------- */
-.stage-frame { position: fixed; inset: 92px 332px 152px 332px; z-index: 5; pointer-events: none; }
+.stage-frame { position: fixed; inset: 92px 332px 72px 332px; z-index: 5; pointer-events: none; }
 .bracket { position: absolute; width: 26px; height: 26px; border: 1px solid rgba(255,255,255,0.22); }
 .bracket.tl { top: 0; left: 0; border-right: none; border-bottom: none; }
 .bracket.tr { top: 0; right: 0; border-left: none; border-bottom: none; }
@@ -139,20 +139,6 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
 }
 .reset-cam:hover { color: #fff; border-color: var(--accent); }
 
-/* ---------- film strip ---------- */
-.film {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 28; height: 124px;
-  background: linear-gradient(0deg, rgba(6,8,11,0.95), rgba(6,8,11,0.55));
-  border-top: 1px solid var(--line); padding: 8px 16px 12px; pointer-events: auto;
-}
-.film-head { display: flex; align-items: center; gap: 14px; font-size: 11px; letter-spacing: 0.16em; color: var(--muted); margin-bottom: 8px; }
-.film-meta { color: var(--text); margin-left: auto; }
-.film-track { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; height: 78px; scrollbar-width: thin; }
-.film-track::-webkit-scrollbar { height: 5px; }
-.film-track::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
-.film-track canvas { height: 72px; width: 72px; flex: none; border: 1px solid var(--line); border-radius: 6px; background: #000; }
-.film-empty { color: var(--muted); font-size: 11px; align-self: center; }
-
 /* ---------- drag overlay ---------- */
 .drop-overlay { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; background: rgba(6,8,11,0.78); backdrop-filter: blur(3px); pointer-events: none; }
 .drop-card { border: 2px dashed var(--accent); border-radius: 18px; padding: 44px 60px; text-align: center; font-size: 17px; letter-spacing: 0.02em; }
@@ -168,5 +154,5 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
 
 @media (max-width: 1180px) {
   .panel { width: 250px; }
-  .stage-frame { inset: 92px 270px 152px 270px; }
+  .stage-frame { inset: 92px 270px 72px 270px; }
 }

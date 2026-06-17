@@ -9,6 +9,8 @@ function pickSettings(config) {
   return {
     density: config.density,
     depth: config.depth,
+    thickness: config.thickness,
+    idleMode: { radial: 0, horizontal: 1, vertical: 2, diagonal: 3 }[config.waveDir] ?? 0,
     particleSize: config.particleSize,
     opacity: config.opacity,
     additive: config.additive,
@@ -59,16 +61,21 @@ const uniforms = {
   uWaveAmp: { value: S.waveAmp }, uWaveFreq: { value: S.waveFreq }, uWaveSpeed: { value: 0 },
   uCursorRadius: { value: S.cursorRadius }, uSize: { value: S.particleSize },
   uPixelRatio: { value: renderer.getPixelRatio() }, uOpacity: { value: S.opacity },
+  uIdleMode: { value: S.idleMode },
 };
 const material = new THREE.ShaderMaterial({
   uniforms, transparent: true, depthWrite: false,
   blending: S.additive ? THREE.AdditiveBlending : THREE.NormalBlending,
   vertexShader: \`
-    uniform float uIdlePhase,uIdleAmp,uIdleFreq,uCursorActive,uWaveAmp,uWaveFreq,uWaveSpeed,uCursorRadius,uSize,uPixelRatio;
+    uniform float uIdlePhase,uIdleAmp,uIdleFreq,uIdleMode,uCursorActive,uWaveAmp,uWaveFreq,uWaveSpeed,uCursorRadius,uSize,uPixelRatio;
     uniform vec3 uCursor; attribute vec3 aColor; attribute float aRand; varying vec3 vColor;
     void main(){ vec3 p=position;
-      float idle=sin(p.x*uIdleFreq+uIdlePhase+aRand*6.2831)+sin(p.y*uIdleFreq*0.9-uIdlePhase);
-      p.z+=idle*uIdleAmp*0.5;
+      float coord;
+      if(uIdleMode<0.5) coord=length(p.xy);
+      else if(uIdleMode<1.5) coord=p.x;
+      else if(uIdleMode<2.5) coord=p.y;
+      else coord=(p.x+p.y)*0.70710678;
+      p.z+=sin(coord*uIdleFreq+uIdlePhase)*uIdleAmp;
       vec2 d=p.xy-uCursor.xy; float dist=length(d);
       float fo=exp(-(dist*dist)/(uCursorRadius*uCursorRadius));
       p.z+=sin(dist*uWaveFreq-uWaveSpeed)*fo*uWaveAmp*uCursorActive;
@@ -86,27 +93,43 @@ scene.add(points);
 const pick = new THREE.Mesh(new THREE.PlaneGeometry(1,1), new THREE.MeshBasicMaterial({visible:false, side:THREE.DoubleSide}));
 points.add(pick);
 
+function svgDims(t){
+  let w,h; const vb=t.match(/viewBox\\s*=\\s*["']?\\s*([\\d.+-]+)[ ,]+([\\d.+-]+)[ ,]+([\\d.+-]+)[ ,]+([\\d.+-]+)/i);
+  if(vb){ w=parseFloat(vb[3]); h=parseFloat(vb[4]); }
+  if(!w||!h){ const wm=t.match(/\\bwidth\\s*=\\s*["']?\\s*([\\d.]+)/i),hm=t.match(/\\bheight\\s*=\\s*["']?\\s*([\\d.]+)/i); if(wm&&hm){w=parseFloat(wm[1]);h=parseFloat(hm[1]);} }
+  if(!w||!h){ w=512; h=512; } return {w,h};
+}
+function distXf(data,cw,ch,th){
+  const INF=1e9,D1=1,D2=1.4142,dist=new Float32Array(cw*ch);
+  for(let i=0;i<cw*ch;i++) dist[i]=data[i*4+3]>th?INF:0;
+  for(let y=0;y<ch;y++)for(let x=0;x<cw;x++){const i=y*cw+x; if(!dist[i])continue; let v=dist[i];
+    if(x>0)v=Math.min(v,dist[i-1]+D1); if(y>0)v=Math.min(v,dist[i-cw]+D1);
+    if(x>0&&y>0)v=Math.min(v,dist[i-cw-1]+D2); if(x<cw-1&&y>0)v=Math.min(v,dist[i-cw+1]+D2); dist[i]=v;}
+  for(let y=ch-1;y>=0;y--)for(let x=cw-1;x>=0;x--){const i=y*cw+x; if(!dist[i])continue; let v=dist[i];
+    if(x<cw-1)v=Math.min(v,dist[i+1]+D1); if(y<ch-1)v=Math.min(v,dist[i+cw]+D1);
+    if(x<cw-1&&y<ch-1)v=Math.min(v,dist[i+cw+1]+D2); if(x>0&&y<ch-1)v=Math.min(v,dist[i+cw-1]+D2); dist[i]=v;}
+  return dist;
+}
 function sample(){
-  let text = SVG;
-  if(!/\\bwidth\\s*=/.test(text)||!/\\bheight\\s*=/.test(text)){
-    const vb=text.match(/viewBox\\s*=\\s*["']\\s*[\\d.+-]+\\s+[\\d.+-]+\\s+([\\d.+-]+)\\s+([\\d.+-]+)/);
-    if(vb) text=text.replace(/<svg/i,'<svg width="'+Math.round(+vb[1])+'" height="'+Math.round(+vb[2])+'"');
-  }
+  const {w,h}=svgDims(SVG);
+  const text=SVG.replace(/<svg([^>]*)>/i,(m,a)=>'<svg width="'+w+'" height="'+h+'"'+a.replace(/\\swidth\\s*=\\s*("[^"]*"|'[^']*'|[^\\s>]+)/i,'').replace(/\\sheight\\s*=\\s*("[^"]*"|'[^']*'|[^\\s>]+)/i,'')+'>');
   const img=new Image(); const url=URL.createObjectURL(new Blob([text],{type:"image/svg+xml"}));
   img.onload=()=>{ URL.revokeObjectURL(url);
-    let w=img.naturalWidth||512,h=img.naturalHeight||512;
     const res=360, sc=res/Math.max(w,h), cw=Math.round(w*sc), ch=Math.round(h*sc);
     const cv=document.createElement("canvas"); cv.width=cw; cv.height=ch;
     const cx=cv.getContext("2d",{willReadFrequently:true}); cx.drawImage(img,0,0,cw,ch);
     const data=cx.getImageData(0,0,cw,ch).data, norm=2/Math.max(cw,ch);
-    const pos=[],col=[],rnd=[]; const keep=Math.min(1,S.density);
+    const dist=distXf(data,cw,ch,40); let md=1; for(let i=0;i<dist.length;i++) if(dist[i]<1e8&&dist[i]>md) md=dist[i];
+    const pos=[],col=[],rnd=[]; const keep=Math.min(1,S.density), col0=new THREE.Color(S.uniformColor);
+    const put=(x,y,t)=>{ const ld=S.depth*(1-S.thickness+S.thickness*t);
+      pos.push((x-cw/2+(Math.random()-.5))*norm, -(y-ch/2+(Math.random()-.5))*norm, (Math.random()-.5)*Math.max(0.04,ld));
+      const i=(y*cw+x)*4; if(S.useSvgColor) col.push(data[i]/255,data[i+1]/255,data[i+2]/255); else col.push(col0.r,col0.g,col0.b);
+      rnd.push(Math.random()); };
     for(let y=0;y<ch;y++)for(let x=0;x<cw;x++){ const i=(y*cw+x)*4;
-      if(data[i+3]>40 && Math.random()<=keep){
-        pos.push((x-cw/2+(Math.random()-.5))*norm, -(y-ch/2+(Math.random()-.5))*norm, (Math.random()-.5)*S.depth);
-        if(S.useSvgColor) col.push(data[i]/255,data[i+1]/255,data[i+2]/255);
-        else { const c=new THREE.Color(S.uniformColor); col.push(c.r,c.g,c.b); }
-        rnd.push(Math.random());
-      }}
+      if(data[i+3]<=40||Math.random()>keep) continue;
+      const t=Math.min(1,dist[y*cw+x]/md); put(x,y,t);
+      if(Math.random()<S.thickness*t) put(x,y,t);
+    }
     const g=points.geometry;
     g.setAttribute("position",new THREE.BufferAttribute(new Float32Array(pos),3));
     g.setAttribute("aColor",new THREE.BufferAttribute(new Float32Array(col),3));

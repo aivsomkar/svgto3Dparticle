@@ -19,6 +19,7 @@ const config = {
   // shape
   density: 0.55,
   depth: 0.4,
+  thickness: 0.6,
   sampleRes: 360,
   useSvgColor: true,
   uniformColor: "#9fe9df",
@@ -30,6 +31,7 @@ const config = {
   background: "#0c1016",
   // ambient wave
   ambientWave: true,
+  waveDir: "radial",
   idleAmp: 0.12,
   idleFreq: 3.5,
   idleSpeed: 1.1,
@@ -105,6 +107,7 @@ function applyConfig() {
   uniforms.uOpacity.value = config.opacity;
   uniforms.uIdleAmp.value = config.ambientWave ? config.idleAmp : 0;
   uniforms.uIdleFreq.value = config.idleFreq;
+  uniforms.uIdleMode.value = { radial: 0, horizontal: 1, vertical: 2, diagonal: 3 }[config.waveDir] ?? 0;
   uniforms.uWaveAmp.value = config.waveAmp;
   uniforms.uWaveFreq.value = config.waveFreq;
   uniforms.uCursorRadius.value = config.cursorRadius;
@@ -124,12 +127,13 @@ let currentSVG = SHAPES.star();
 async function loadSVGText(svgText) {
   currentSVG = svgText;
   const data = await sampleSVG(svgText, {
-    density: config.density, depth: config.depth, sampleRes: config.sampleRes, useSvgColor: config.useSvgColor,
+    density: config.density, depth: config.depth, thickness: config.thickness,
+    sampleRes: config.sampleRes, useSvgColor: config.useSvgColor,
   });
   particles.setData(data);
   if (!config.useSvgColor) particles.setUniformColor(config.uniformColor);
   hasShape = true;
-  ui.setFilmMeta(`${data.count.toLocaleString()} particles`);
+  ui.setStatus(`${data.count.toLocaleString()} particles`);
   return data.count;
 }
 async function rebuild() { if (currentSVG) await loadSVGText(currentSVG); }
@@ -214,35 +218,6 @@ async function withExportResolution(longEdge, fn) {
 }
 
 // ---------------------------------------------------------------------------
-// Film strip
-// ---------------------------------------------------------------------------
-async function generateFilmStrip(count = 24) {
-  if (!hasShape) return;
-  exporting = true;
-  ui.clearFilm();
-  const { renderFrame, restore } = makeLoopRenderer();
-  const THUMB = 72;
-  try {
-    await withExportResolution(THUMB * 2, () => {
-      for (let i = 0; i < count; i++) {
-        renderFrame(i / count);
-        const c = document.createElement("canvas");
-        c.width = THUMB; c.height = THUMB;
-        const ctx = c.getContext("2d");
-        ctx.fillStyle = config.background;
-        ctx.fillRect(0, 0, THUMB, THUMB);
-        const gl = renderer.domElement;
-        const s = Math.min(gl.width, gl.height);
-        ctx.drawImage(gl, (gl.width - s) / 2, (gl.height - s) / 2, s, s, 0, 0, THUMB, THUMB);
-        ui.addFilmFrame(c);
-      }
-      return Promise.resolve();
-    });
-  } finally { restore(); exporting = false; }
-  ui.setFilmMeta(`${count} frames · ${config.exportRes}px`);
-}
-
-// ---------------------------------------------------------------------------
 // Camera helpers
 // ---------------------------------------------------------------------------
 function setCamAspect(aspect) {
@@ -299,7 +274,7 @@ const actions = {
   // unified change handler for sliders / toggles / colors
   change(key) {
     applyConfig();
-    if (key === "density" || key === "depth" || key === "sampleRes") rebuild();
+    if (key === "density" || key === "depth" || key === "sampleRes" || key === "thickness") rebuild();
     else if (key === "useSvgColor") { if (config.useSvgColor) rebuild(); else particles.setUniformColor(config.uniformColor); }
     else if (key === "uniformColor") { if (!config.useSvgColor) particles.setUniformColor(config.uniformColor); }
   },
@@ -333,8 +308,6 @@ const actions = {
     actions.setSubject(config.subject);
     ui.sync();
   },
-  regenStrip() { generateFilmStrip(); },
-
   exportFormat(name) {
     if (name === "embed") return actions.showEmbed();
     if (!hasShape) return ui.setStatus("drop an SVG first");
@@ -367,5 +340,4 @@ frame();
 (async () => {
   await loadSVGText(SHAPES[config.subject]());
   ui.sync();
-  setTimeout(() => generateFilmStrip(), 400);
 })();

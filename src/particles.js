@@ -8,6 +8,7 @@ export class ParticleSystem {
       uIdlePhase: { value: 0 },
       uIdleAmp: { value: 0.12 },
       uIdleFreq: { value: 3.5 },
+      uIdleMode: { value: 0 },
 
       uCursor: { value: new THREE.Vector3(999, 999, 0) },
       uCursorActive: { value: 0 },

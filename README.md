@@ -17,25 +17,24 @@ npm run build    # production build → dist/
 
 ## Panel guide
 
-The UI is organized into six numbered sections (left + right) over a full-bleed
-stage, with a live **film strip** of the turntable loop along the bottom.
+The UI is organized into numbered sections (left + right) over a full-bleed stage.
 
 - **01 SUBJECT** — 16 built-in shapes (star, bolt, heart, gear, flower…),
   **UPLOAD SVG**, drag-and-drop *anywhere*, or `type text → 3d`.
-- **02 SCENE** — background mood: Studio / Sunset / Neon / Noir.
-- **03 MOTION**
-  - **SPIN** · Turntable (auto-rotate, toggle)
-  - **WAVE** · **Ambient** and **Cursor** ripples, each individually toggleable
-  - **OBJECT** · Settle / Sway / Pendulum / Float / Nod / Push-in / Drop-in
-  - **LIGHT** · Light-pan / Glint / Flicker
-- **04 MATERIAL** — color/style presets (Chrome, Gunmetal, Porcelain, Copper,
-  Lens, Lens-dark, Brand, **Original** = the SVG's own colors, **Custom** picker).
-- **05 GEOMETRY** — Depth (extrusion), Density, Particle size.
-- **06 FILM & EXPORT** — Frames, FPS, export resolution (512 → 4K), transparent
-  toggle, and the export buttons.
+- **02 SHAPE** — Density, Extrude depth, **Volume from thickness**, Detail,
+  Use-SVG-colors, Particle color. *Volume from thickness* runs a distance
+  transform over the shape so chunky regions bulge into a deeper, denser volume
+  while thin strokes stay shallow (0 = uniform slab, 1 = fully volumetric).
+- **03 LOOK** — Particle size, Opacity, Glow (additive), Depth fog, Background.
+- **04 AMBIENT WAVE** — on/off, **Direction** (Radial / Horizontal / Vertical /
+  Diagonal), Amplitude, Frequency, Speed.
+- **05 ROTATION** — on/off, Speed, Tilt.
+- **06 CURSOR WAVE** — on/off, Amplitude, Frequency, Ripple speed, Reach.
+- **07 FILM & EXPORT** — FPS, Loop seconds, Rotations/loop, WebM seconds,
+  export resolution (512 → 4K), transparent toggle, and the export buttons.
 
 Top bar: **CHANGE DIMENSION** toggles perspective ↔ orthographic camera.
-**SHUFFLE** randomizes the whole composition. Drag to orbit; **RESET CAM** recenters.
+**SHUFFLE** randomizes the composition. Drag to orbit; **RESET CAM** recenters.
 
 ## Displacement is depth-only
 
