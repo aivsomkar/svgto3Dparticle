@@ -18,13 +18,13 @@ const DEFAULTS = {
   subject: "star",
   // shape
   density: 0.55,
-  depth: 0.4,
+  depth: 0.1,
   thickness: 0.6,
-  sampleRes: 360,
+  sampleRes: 600,
   useSvgColor: true,
   uniformColor: "#9fe9df",
   // look
-  particleSize: 6.0,
+  particleSize: 1.0,
   opacity: 0.95,
   additive: false,
   fog: true,
@@ -35,13 +35,13 @@ const DEFAULTS = {
   assemble: true,
   assembleDuration: 1.6,
   // ambient wave
-  ambientWave: true,
+  ambientWave: false,
   waveDir: "radial",
   idleAmp: 0.12,
   idleFreq: 3.5,
   idleSpeed: 1.1,
   // rotation
-  autoRotate: true,
+  autoRotate: false,
   rotateSpeed: 0.35,
   tilt: 0.32,
   // cursor wave

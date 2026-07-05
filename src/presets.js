@@ -104,16 +104,18 @@ export function textToSVG(text) {
   );
 }
 
-// Look presets — named looks applied on top of the current subject, shown as
-// the PRESETS list in the left panel (gradient-lab style). Each tag describes
-// the look's character and renders right-aligned and muted in the list row.
+// Look presets — palette + finish only. They deliberately never touch shape
+// or motion settings, so applying one restyles the scene without resetting
+// anything the user has tuned. Tag = the finish it applies.
 export const LOOK_PRESETS = [
-  { name: "Aurora",   tag: "glow",  settings: { useSvgColor: false, uniformColor: "#7ef0c8", background: "#061224", additive: true,  fog: true, ambientWave: true, waveDir: "radial",     idleAmp: 0.18, idleFreq: 3.0, idleSpeed: 0.9, rotateSpeed: 0.25, tilt: 0.25, particleSize: 5,   opacity: 0.9  } },
-  { name: "Sunset",   tag: "soft",  settings: { useSvgColor: false, uniformColor: "#ff9a62", background: "#1a0c14", additive: false, fog: true, ambientWave: true, waveDir: "horizontal", idleAmp: 0.12, idleFreq: 2.5, idleSpeed: 0.7, rotateSpeed: 0.2,  tilt: 0.3,  particleSize: 6,   opacity: 0.95 } },
-  { name: "Ember",    tag: "glow",  settings: { useSvgColor: false, uniformColor: "#ff6a3d", background: "#050505", additive: true,  fog: true, ambientWave: true, waveDir: "radial",     idleAmp: 0.08, idleFreq: 4.0, idleSpeed: 1.2, rotateSpeed: 0.3,  tilt: 0.2,  particleSize: 4,   opacity: 0.85 } },
-  { name: "Frost",    tag: "calm",  settings: { useSvgColor: false, uniformColor: "#cfe8ff", background: "#0a1420", additive: false, fog: true, ambientWave: true, waveDir: "vertical",   idleAmp: 0.06, idleFreq: 2.0, idleSpeed: 0.5, rotateSpeed: 0.12, tilt: 0.15, particleSize: 5.5, opacity: 0.9  } },
-  { name: "Neon",     tag: "pulse", settings: { useSvgColor: false, uniformColor: "#ff4fd8", background: "#07001a", additive: true,  fog: true, ambientWave: true, waveDir: "radial",     idleAmp: 0.2,  idleFreq: 5.0, idleSpeed: 1.6, rotateSpeed: 0.4,  tilt: 0.3,  particleSize: 5,   opacity: 0.9  } },
-  { name: "Ink",      tag: "calm",  settings: { useSvgColor: false, uniformColor: "#e8eef2", background: "#0b0d10", additive: false, fog: true, ambientWave: true, waveDir: "diagonal",   idleAmp: 0.05, idleFreq: 2.5, idleSpeed: 0.6, rotateSpeed: 0.18, tilt: 0.25, particleSize: 6,   opacity: 1    } },
-  { name: "Hologram", tag: "glow",  settings: { useSvgColor: false, uniformColor: "#59e8ff", background: "#02131d", additive: true,  fog: true, ambientWave: true, waveDir: "vertical",   idleAmp: 0.14, idleFreq: 6.0, idleSpeed: 1.1, rotateSpeed: 0.35, tilt: 0.35, particleSize: 4.5, opacity: 0.85 } },
-  { name: "Candy",    tag: "pulse", settings: { useSvgColor: false, uniformColor: "#ff8ac2", background: "#12061f", additive: false, fog: true, ambientWave: true, waveDir: "radial",     idleAmp: 0.25, idleFreq: 5.0, idleSpeed: 1.4, rotateSpeed: 0.3,  tilt: 0.28, particleSize: 7,   opacity: 0.95 } },
+  { name: "Aurora",   tag: "glow",  settings: { useSvgColor: false, uniformColor: "#7ef0c8", background: "#050d18", additive: true,  sparkle: false } },
+  { name: "Hologram", tag: "spark", settings: { useSvgColor: false, uniformColor: "#6de5ff", background: "#02111a", additive: true,  sparkle: true  } },
+  { name: "Ember",    tag: "glow",  settings: { useSvgColor: false, uniformColor: "#ff7a45", background: "#0a0503", additive: true,  sparkle: false } },
+  { name: "Gold",     tag: "spark", settings: { useSvgColor: false, uniformColor: "#ffd27a", background: "#100b03", additive: true,  sparkle: true  } },
+  { name: "Neon",     tag: "glow",  settings: { useSvgColor: false, uniformColor: "#ff5ad8", background: "#0d0118", additive: true,  sparkle: false } },
+  { name: "Acid",     tag: "bold",  settings: { useSvgColor: false, uniformColor: "#c8ff4d", background: "#0a1004", additive: false, sparkle: false } },
+  { name: "Frost",    tag: "calm",  settings: { useSvgColor: false, uniformColor: "#dceaff", background: "#0b1420", additive: false, sparkle: false } },
+  { name: "Sunset",   tag: "warm",  settings: { useSvgColor: false, uniformColor: "#ff9a62", background: "#170b12", additive: false, sparkle: false } },
+  { name: "Matrix",   tag: "spark", settings: { useSvgColor: false, uniformColor: "#52ff8a", background: "#020a04", additive: true,  sparkle: true  } },
+  { name: "Ink",      tag: "mono",  settings: { useSvgColor: false, uniformColor: "#edf2f6", background: "#0a0c0f", additive: false, sparkle: false } },
 ];

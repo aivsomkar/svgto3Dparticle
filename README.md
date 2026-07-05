@@ -22,8 +22,9 @@ floating frosted panels over a full-bleed stage, neutral glass buttons with
 white active states, and sentence-case labels.
 
 - **Left panel** — Subject grid (9 shapes + *Show more*), Upload SVG, text →
-  3D input, and a **Presets** list (Aurora, Sunset, Ember, Frost, Neon, Ink,
-  Hologram, Candy) that restyles the current shape in one click.
+  3D input, and a **Presets** list (Aurora, Hologram, Ember, Gold, Neon,
+  Acid, Frost, Sunset, Matrix, Ink) — palette + finish only, so applying one
+  never resets your shape or motion settings.
 - **Right panel** — Colors (swatches, *Use SVG colors*, *Glow*, **Randomize
   palette**), Shape sliders, Motion (ambient wave / rotation / cursor wave),
   and Export.
