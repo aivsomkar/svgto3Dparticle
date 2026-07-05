@@ -23,14 +23,25 @@ export const vertexShader = /* glsl */ `
   uniform float uSize;
   uniform float uPixelRatio;
 
+  uniform float uAssemble;      // 0..1 — particles fly from aScatter to their spot
+  uniform float uSparkle;       // 0/1 — twinkle on/off
+  uniform float uTime;          // continuous time for the sparkle pulse
+
   attribute vec3  aColor;
   attribute float aRand;
+  attribute vec3  aScatter;     // random shell position the particle assembles from
 
   varying vec3  vColor;
   varying float vDepth;
+  varying float vFade;          // assembly fade-in
+  varying float vSpark;         // sparkle brightness boost
 
   void main() {
-    vec3 pos = position;
+    // --- assembly: staggered per particle by aRand, eased ---
+    float t = clamp(uAssemble * 1.45 - aRand * 0.45, 0.0, 1.0);
+    t = t * t * (3.0 - 2.0 * t);
+    vec3 pos = mix(aScatter, position, t);
+    vFade = mix(0.35, 1.0, t);
 
     // --- ambient idle wave (seamless over uIdlePhase 0..2π) ---
     // The wave travels along a chosen direction; displacement stays on Z.
@@ -53,9 +64,14 @@ export const vertexShader = /* glsl */ `
     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
     gl_Position = projectionMatrix * mvPosition;
 
+    // --- sparkle: a sharp, per-particle twinkle pulse ---
+    float pulse = pow(0.5 + 0.5 * sin(uTime * 4.0 + aRand * 40.0), 10.0);
+    vSpark = uSparkle * pulse;
+
     // perspective size attenuation
     gl_PointSize = uSize * uPixelRatio * (8.0 / -mvPosition.z);
     gl_PointSize *= (0.7 + 0.6 * aRand);
+    gl_PointSize *= 1.0 + vSpark * 0.6;
 
     vColor = aColor;
     vDepth = -mvPosition.z;
@@ -73,15 +89,17 @@ export const fragmentShader = /* glsl */ `
 
   varying vec3  vColor;
   varying float vDepth;
+  varying float vFade;
+  varying float vSpark;
 
   void main() {
     // round, soft-edged point
     vec2 uv = gl_PointCoord - 0.5;
     float r = length(uv);
     if (r > 0.5) discard;
-    float alpha = smoothstep(0.5, 0.18, r) * uOpacity;
+    float alpha = smoothstep(0.5, 0.18, r) * uOpacity * vFade;
 
-    vec3 color = vColor;
+    vec3 color = vColor * (1.0 + vSpark * 1.4);
 
     // optional depth fog so the back of the volume reads as further away
     if (uUseFog > 0.5) {

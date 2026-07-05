@@ -53,6 +53,8 @@
         <div class="grid-toggles">
           <button class="gbtn toggle-pill" data-toggle="useSvgColor">Use SVG colors</button>
           <button class="gbtn toggle-pill" data-toggle="additive">Glow</button>
+          <button class="gbtn toggle-pill" data-toggle="sparkle">Sparkle</button>
+          <button class="gbtn toggle-pill" data-toggle="starfield">Stars</button>
         </div>
         <div class="color-row"><span class="c-label">Particle</span><input type="color" class="swatch-input" data-color="uniformColor" aria-label="Particle color" /></div>
         <div class="color-row"><span class="c-label">Background</span><input type="color" class="swatch-input" data-color="background" aria-label="Background color" /></div>
@@ -72,6 +74,9 @@
 
       <div class="sec">
         <div class="sec-label">Motion</div>
+
+        <div class="group-title">Assembly <button class="gbtn small toggle-pill" data-toggle="assemble">On</button></div>
+        <div class="slider" data-key="assembleDuration" data-min="0.4" data-max="4" data-step="0.1" data-label="Fly-in seconds"></div>
 
         <div class="group-title">Ambient wave <button class="gbtn small toggle-pill" data-toggle="ambientWave">On</button></div>
         <div class="btn-grid cols-2" id="wavedir-pills"></div>

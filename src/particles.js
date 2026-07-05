@@ -21,6 +21,10 @@ export class ParticleSystem {
       uSize: { value: 6.0 },
       uPixelRatio: { value: pixelRatio },
 
+      uAssemble: { value: 1 },
+      uSparkle: { value: 0 },
+      uTime: { value: 0 },
+
       uOpacity: { value: 0.95 },
       uFogColor: { value: new THREE.Color(0x05070a) },
       uFogNear: { value: 4.0 },
@@ -55,6 +59,19 @@ export class ParticleSystem {
     geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     geo.setAttribute("aColor", new THREE.BufferAttribute(colors, 3));
     geo.setAttribute("aRand", new THREE.BufferAttribute(rands, 1));
+
+    // random shell positions the assembly animation converges from
+    const count = positions.length / 3;
+    const scatter = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = 5 + Math.random() * 5;
+      scatter[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      scatter[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      scatter[i * 3 + 2] = r * Math.cos(phi);
+    }
+    geo.setAttribute("aScatter", new THREE.BufferAttribute(scatter, 3));
     geo.computeBoundingSphere();
 
     // size the pick plane a bit beyond the shape so edge particles still react

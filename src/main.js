@@ -29,6 +29,11 @@ const DEFAULTS = {
   additive: false,
   fog: true,
   background: "#0c1016",
+  sparkle: false,
+  starfield: true,
+  // assembly (particles fly in from scattered space when a shape loads)
+  assemble: true,
+  assembleDuration: 1.6,
   // ambient wave
   ambientWave: true,
   waveDir: "radial",
@@ -122,6 +127,36 @@ scene.add(particles.points);
 const uniforms = particles.uniforms;
 
 // ---------------------------------------------------------------------------
+// Starfield — a sparse far shell of dim points that parallaxes with the orbit
+// ---------------------------------------------------------------------------
+const starfield = (() => {
+  const COUNT = 450;
+  const pos = new Float32Array(COUNT * 3);
+  const col = new Float32Array(COUNT * 3);
+  for (let i = 0; i < COUNT; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const r = 16 + Math.random() * 22;
+    pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+    pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    pos[i * 3 + 2] = r * Math.cos(phi);
+    const b = 0.25 + Math.random() * 0.75;
+    col[i * 3] = b; col[i * 3 + 1] = b; col[i * 3 + 2] = b;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  const mat = new THREE.PointsMaterial({
+    size: 0.06, sizeAttenuation: true, vertexColors: true,
+    transparent: true, opacity: 0.8, depthWrite: false,
+  });
+  const points = new THREE.Points(geo, mat);
+  points.frustumCulled = false;
+  return points;
+})();
+scene.add(starfield);
+
+// ---------------------------------------------------------------------------
 // Cursor ripple origin
 // ---------------------------------------------------------------------------
 const raycaster = new THREE.Raycaster();
@@ -148,6 +183,8 @@ function applyConfig() {
   uniforms.uCursorRadius.value = config.cursorRadius;
   uniforms.uUseFog.value = config.fog ? 1 : 0;
   uniforms.uFogColor.value.set(config.background);
+  uniforms.uSparkle.value = config.sparkle ? 1 : 0;
+  starfield.visible = config.starfield;
   particles.setBlending(config.additive);
   // Live view clears transparent so the CSS gradient backdrop shows through;
   // exports opt back into an opaque clear (see doWebM / offline compositing).
@@ -191,6 +228,7 @@ async function loadSVGText(svgText, { announce = "" } = {}) {
   currentSVG = svgText;
   particles.setData(data);
   if (!config.useSvgColor) particles.setUniformColor(config.uniformColor);
+  if (config.assemble) uniforms.uAssemble.value = 0; // replay the fly-in
   hasShape = true;
   ui.setStatus(`${data.count.toLocaleString()} particles`);
   if (announce) ui.toast(announce, "ok");
@@ -264,6 +302,12 @@ function frame() {
 
   uniforms.uIdlePhase.value = (uniforms.uIdlePhase.value + dt * config.idleSpeed) % TWO_PI;
   uniforms.uWaveSpeed.value += dt * config.waveSpeed;
+  uniforms.uTime.value += dt;
+  if (uniforms.uAssemble.value < 1) {
+    uniforms.uAssemble.value = Math.min(1, uniforms.uAssemble.value + dt / Math.max(0.2, config.assembleDuration));
+  }
+
+  starfield.rotation.y += dt * 0.008;
 
   if (config.cursorWave) {
     raycaster.setFromCamera(pointerNDC, activeCamera);
@@ -284,10 +328,19 @@ function frame() {
 // Export driver (seamless loop) + resolution swap
 // ---------------------------------------------------------------------------
 function makeLoopRenderer() {
-  const saved = { phase: uniforms.uIdlePhase.value, active: uniforms.uCursorActive.value, rotY: particles.points.rotation.y };
+  const saved = {
+    phase: uniforms.uIdlePhase.value, active: uniforms.uCursorActive.value,
+    rotY: particles.points.rotation.y, assemble: uniforms.uAssemble.value,
+    time: uniforms.uTime.value, stars: starfield.visible,
+  };
   const baseRotY = saved.rotY;
+  // sparkle time must sweep whole pulse periods (period π/2) to loop seamlessly
+  const sparkleSpan = (Math.PI / 2) * Math.max(1, Math.round(config.exportDuration));
+  starfield.visible = config.starfield && !config.exportTransparent;
   const renderFrame = (phase) => {
     uniforms.uCursorActive.value = 0;
+    uniforms.uAssemble.value = 1;
+    uniforms.uTime.value = phase * sparkleSpan;
     uniforms.uIdlePhase.value = config.ambientWave ? phase * TWO_PI : 0;
     const rotations = config.autoRotate ? config.exportRotations : 0;
     particles.points.rotation.y = baseRotY + phase * TWO_PI * rotations;
@@ -297,7 +350,10 @@ function makeLoopRenderer() {
   const restore = () => {
     uniforms.uIdlePhase.value = saved.phase;
     uniforms.uCursorActive.value = saved.active;
+    uniforms.uAssemble.value = saved.assemble;
+    uniforms.uTime.value = saved.time;
     particles.points.rotation.y = saved.rotY;
+    starfield.visible = saved.stars;
   };
   return { renderFrame, restore };
 }
@@ -378,6 +434,7 @@ function doWebM() {
     // MediaRecorder captures the canvas only — give it an opaque background
     // for the recording unless the user asked for transparency.
     if (!config.exportTransparent) renderer.setClearColor(new THREE.Color(config.background), 1);
+    else starfield.visible = false; // stars don't belong in a transparent capture
     const rec = recordWebM(renderer, { fps: 60, bitrate: 40_000_000, transparent: config.exportTransparent });
     rec.done
       .then(() => { ui.setStatus("WebM saved ✓"); ui.toast("WebM saved to your downloads.", "ok"); })
@@ -409,6 +466,7 @@ const actions = {
     if (key === "density" || key === "depth" || key === "sampleRes" || key === "thickness") rebuild();
     else if (key === "useSvgColor") { if (config.useSvgColor) rebuild(); else particles.setUniformColor(config.uniformColor); }
     else if (key === "uniformColor") { if (!config.useSvgColor) particles.setUniformColor(config.uniformColor); }
+    else if (key === "assemble" && config.assemble) uniforms.uAssemble.value = 0; // replay so the toggle shows itself
     saveSoon();
   },
 
