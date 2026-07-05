@@ -12,9 +12,9 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const rand = (lo, hi) => lo + Math.random() * (hi - lo);
 
 // ---------------------------------------------------------------------------
-// Config — the original control set
+// Config — defaults + persisted settings
 // ---------------------------------------------------------------------------
-const config = {
+const DEFAULTS = {
   subject: "star",
   // shape
   density: 0.55,
@@ -54,6 +54,44 @@ const config = {
   webmSeconds: 6,
   embedTransparent: false,
 };
+
+const STORE_KEY = "svg-particles.settings.v1";
+const MAX_PERSISTED_SVG = 300_000; // chars — skip persisting very large uploads
+
+function loadStored() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return {};
+    const data = JSON.parse(raw);
+    return typeof data === "object" && data ? data : {};
+  } catch {
+    return {};
+  }
+}
+const stored = loadStored();
+
+// Only accept known keys with matching types so stale/corrupt storage can't break boot.
+const config = { ...DEFAULTS };
+for (const k of Object.keys(DEFAULTS)) {
+  if (k in (stored.config || {}) && typeof stored.config[k] === typeof DEFAULTS[k]) {
+    config[k] = stored.config[k];
+  }
+}
+const collapsedSections = { ...(stored.collapsed || {}) };
+
+let saveTimer;
+function saveSoon() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({
+        config,
+        collapsed: collapsedSections,
+        svg: currentSVG && currentSVG.length <= MAX_PERSISTED_SVG ? currentSVG : null,
+      }));
+    } catch { /* storage full / disabled — persistence is best-effort */ }
+  }, 400);
+}
 
 // ---------------------------------------------------------------------------
 // Renderer / scene / cameras
@@ -119,24 +157,51 @@ function applyConfig() {
 }
 
 // ---------------------------------------------------------------------------
-// Shape loading
+// Shape loading — currentSVG only advances on a successful sample, so a bad
+// upload never destroys the shape on screen.
 // ---------------------------------------------------------------------------
 let hasShape = false;
-let currentSVG = SHAPES.star();
+let currentSVG = typeof stored.svg === "string" && stored.svg ? stored.svg : null;
 
-async function loadSVGText(svgText) {
-  currentSVG = svgText;
+async function loadSVGText(svgText, { announce = "" } = {}) {
   const data = await sampleSVG(svgText, {
     density: config.density, depth: config.depth, thickness: config.thickness,
     sampleRes: config.sampleRes, useSvgColor: config.useSvgColor,
   });
+  if (!data || !data.count) throw new Error("no drawable geometry found in the SVG");
+  currentSVG = svgText;
   particles.setData(data);
   if (!config.useSvgColor) particles.setUniformColor(config.uniformColor);
   hasShape = true;
   ui.setStatus(`${data.count.toLocaleString()} particles`);
+  if (announce) ui.toast(announce, "ok");
+  saveSoon();
   return data.count;
 }
-async function rebuild() { if (currentSVG) await loadSVGText(currentSVG); }
+
+// Wrapper for every user-initiated load: reports failures instead of dying silently.
+async function tryLoadSVG(svgText, { announce = "", source = "SVG" } = {}) {
+  try {
+    await loadSVGText(svgText, { announce });
+    return true;
+  } catch (err) {
+    console.error(err);
+    ui.toast(`Couldn't read that ${source} — ${err.message || "it may be malformed"}. Keeping the current shape.`, "err");
+    return false;
+  }
+}
+
+// Loads that replace the subject (upload / drop / text): only clear the subject
+// pill when the new shape actually loads.
+async function loadAsCustom(svgText, opts) {
+  const prevSubject = config.subject;
+  config.subject = "";
+  ui.sync();
+  const ok = await tryLoadSVG(svgText, opts);
+  if (!ok) { config.subject = prevSubject; ui.sync(); }
+  return ok;
+}
+async function rebuild() { if (currentSVG) await tryLoadSVG(currentSVG); }
 
 // ---------------------------------------------------------------------------
 // Drag & drop
@@ -150,20 +215,33 @@ window.addEventListener("drop", async (e) => {
   e.preventDefault();
   dragDepth = 0;
   dropOverlay.classList.add("hidden");
-  const file = [...(e.dataTransfer?.files || [])].find((f) => f.type === "image/svg+xml" || f.name.toLowerCase().endsWith(".svg"));
-  if (file) { config.subject = ""; ui.sync(); await loadSVGText(await file.text()); }
+  const files = [...(e.dataTransfer?.files || [])];
+  const file = files.find((f) => f.type === "image/svg+xml" || f.name.toLowerCase().endsWith(".svg"));
+  if (!file) {
+    if (files.length) ui.toast("That file isn't an SVG — drop a .svg file to forge it.", "info");
+    return;
+  }
+  await loadAsCustom(await file.text(), { announce: `Forged ${file.name}`, source: "file" });
 });
 
 // ---------------------------------------------------------------------------
-// Animation loop
+// Animation loop + FPS meter
 // ---------------------------------------------------------------------------
 const clock = new THREE.Clock();
 let exporting = false;
+let fpsAccum = 0, fpsFrames = 0, fpsLast = performance.now();
 
 function frame() {
   requestAnimationFrame(frame);
   if (exporting) return;
   const dt = Math.min(clock.getDelta(), 0.05);
+
+  const now = performance.now();
+  fpsAccum += now - fpsLast; fpsLast = now; fpsFrames++;
+  if (fpsAccum >= 500) {
+    ui.setFps((fpsFrames * 1000) / fpsAccum);
+    fpsAccum = 0; fpsFrames = 0;
+  }
 
   uniforms.uIdlePhase.value = (uniforms.uIdlePhase.value + dt * config.idleSpeed) % TWO_PI;
   uniforms.uWaveSpeed.value += dt * config.waveSpeed;
@@ -236,40 +314,71 @@ function onResize() {
 window.addEventListener("resize", onResize);
 
 // ---------------------------------------------------------------------------
-// Exports
+// Exports — one at a time, always reported, always cleaned up
 // ---------------------------------------------------------------------------
-async function doGIF() {
+let busy = false;
+
+async function runOfflineExport(label, exporter) {
+  if (busy) return ui.toast("An export is already running — hang tight.", "info");
+  busy = true;
   exporting = true;
+  ui.setBusy(true);
   const { renderFrame, restore } = makeLoopRenderer();
   try {
     await withExportResolution(config.exportRes, (w, h) =>
-      exportGIF(renderer, renderFrame, { fps: config.exportFps, duration: config.exportDuration, width: w, height: h, transparent: config.exportTransparent, bgColor: config.background, onProgress: ui.progress("GIF") }));
-    ui.setStatus("GIF saved ✓");
-  } finally { restore(); exporting = false; }
+      exporter(renderFrame, w, h));
+    ui.setStatus(`${label} saved ✓`);
+    ui.toast(`${label} saved to your downloads.`, "ok");
+  } catch (err) {
+    console.error(err);
+    ui.setStatus("export failed");
+    ui.toast(`${label} export failed — ${err.message || "unknown error"}.`, "err");
+  } finally {
+    restore();
+    exporting = false;
+    busy = false;
+    ui.setBusy(false);
+  }
 }
-async function doPNG() {
-  exporting = true;
-  const { renderFrame, restore } = makeLoopRenderer();
-  try {
-    await withExportResolution(config.exportRes, (w, h) =>
-      exportPNGSequence(renderer, renderFrame, { fps: config.exportFps, duration: config.exportDuration, width: w, height: h, transparent: config.exportTransparent, bgColor: config.background, onProgress: ui.progress("PNG") }));
-    ui.setStatus("PNG zip saved ✓");
-  } finally { restore(); exporting = false; }
-}
+
+const doGIF = () => runOfflineExport("GIF", (renderFrame, w, h) =>
+  exportGIF(renderer, renderFrame, { fps: config.exportFps, duration: config.exportDuration, width: w, height: h, transparent: config.exportTransparent, bgColor: config.background, onProgress: ui.progress("GIF") }));
+
+const doPNG = () => runOfflineExport("PNG sequence", (renderFrame, w, h) =>
+  exportPNGSequence(renderer, renderFrame, { fps: config.exportFps, duration: config.exportDuration, width: w, height: h, transparent: config.exportTransparent, bgColor: config.background, onProgress: ui.progress("PNG") }));
+
 function doWebM() {
-  ui.setStatus("recording WebM…");
-  const rec = recordWebM(renderer, { fps: 60, bitrate: 40_000_000, transparent: config.exportTransparent });
-  rec.done.then(() => ui.setStatus("WebM saved ✓"));
-  setTimeout(() => rec.stop(), config.webmSeconds * 1000);
+  if (busy) return ui.toast("An export is already running — hang tight.", "info");
+  if (typeof MediaRecorder === "undefined") {
+    return ui.toast("WebM recording isn't supported in this browser — try Chrome, or export a GIF instead.", "err");
+  }
+  busy = true;
+  ui.setBusy(true);
+  ui.setStatus(`recording WebM… ${config.webmSeconds}s`);
+  try {
+    const rec = recordWebM(renderer, { fps: 60, bitrate: 40_000_000, transparent: config.exportTransparent });
+    rec.done
+      .then(() => { ui.setStatus("WebM saved ✓"); ui.toast("WebM saved to your downloads.", "ok"); })
+      .catch((err) => { console.error(err); ui.toast(`WebM recording failed — ${err.message || "unknown error"}.`, "err"); })
+      .finally(() => { busy = false; ui.setBusy(false); });
+    setTimeout(() => rec.stop(), config.webmSeconds * 1000);
+  } catch (err) {
+    console.error(err);
+    busy = false;
+    ui.setBusy(false);
+    ui.toast(`Couldn't start the WebM recording — ${err.message || "unknown error"}.`, "err");
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Actions wired to the UI
 // ---------------------------------------------------------------------------
 const actions = {
-  async setSubject(key) { await loadSVGText(SHAPES[key]()); },
-  async uploadSVG(file) { await loadSVGText(await file.text()); },
-  async setText(text) { if (text.trim()) await loadSVGText(textToSVG(text)); },
+  async setSubject(key) { saveSoon(); await tryLoadSVG(SHAPES[key](), { source: "shape" }); },
+  async uploadSVG(file) {
+    await loadAsCustom(await file.text(), { announce: `Forged ${file.name}`, source: "file" });
+  },
+  async setText(text) { if (text.trim()) await loadAsCustom(textToSVG(text), { source: "text" }); },
 
   // unified change handler for sliders / toggles / colors
   change(key) {
@@ -277,6 +386,23 @@ const actions = {
     if (key === "density" || key === "depth" || key === "sampleRes" || key === "thickness") rebuild();
     else if (key === "useSvgColor") { if (config.useSvgColor) rebuild(); else particles.setUniformColor(config.uniformColor); }
     else if (key === "uniformColor") { if (!config.useSvgColor) particles.setUniformColor(config.uniformColor); }
+    saveSoon();
+  },
+
+  sectionToggled(sec, collapsed) {
+    collapsedSections[sec] = collapsed;
+    saveSoon();
+  },
+
+  resetAll() {
+    try { localStorage.removeItem(STORE_KEY); } catch { /* ignore */ }
+    Object.assign(config, DEFAULTS);
+    for (const k of Object.keys(collapsedSections)) delete collapsedSections[k];
+    ui.setCollapsed({});
+    applyConfig();
+    ui.sync();
+    actions.setSubject(config.subject);
+    ui.toast("Settings restored to defaults.", "ok");
   },
 
   resetCam() {
@@ -310,12 +436,13 @@ const actions = {
   },
   exportFormat(name) {
     if (name === "embed") return actions.showEmbed();
-    if (!hasShape) return ui.setStatus("drop an SVG first");
+    if (!hasShape) return ui.toast("Load a shape first — pick a subject or drop an SVG.", "info");
     if (name === "webm") return doWebM();
     if (name === "gif") return doGIF();
     if (name === "png") return doPNG();
   },
   showEmbed() {
+    if (!hasShape) return ui.toast("Load a shape first — pick a subject or drop an SVG.", "info");
     config.embedTransparent = config.exportTransparent;
     ui.showEmbed(buildEmbedSnippet(currentSVG, config));
   },
@@ -330,14 +457,26 @@ const actions = {
 };
 
 // ---------------------------------------------------------------------------
-// Boot
+// Boot — restore persisted scene, fall back to defaults on any failure
 // ---------------------------------------------------------------------------
 const ui = buildUI(config, actions);
+ui.setCollapsed(collapsedSections);
 applyConfig();
 onResize();
 frame();
 
 (async () => {
-  await loadSVGText(SHAPES[config.subject]());
+  try {
+    if (currentSVG && !config.subject) {
+      await loadSVGText(currentSVG);
+    } else {
+      const key = SHAPES[config.subject] ? config.subject : "star";
+      await loadSVGText(SHAPES[key]());
+    }
+  } catch (err) {
+    console.error(err);
+    currentSVG = null;
+    await tryLoadSVG(SHAPES.star(), { source: "shape" });
+  }
   ui.sync();
 })();

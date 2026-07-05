@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SVG → 3D · forge</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='10' cy='16' r='5' fill='%23f1591f'/%3E%3Ccircle cx='22' cy='10' r='3' fill='%23ff8a5c'/%3E%3Ccircle cx='23' cy='22' r='4' fill='%23f1591f' opacity='0.7'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
@@ -12,111 +13,133 @@
     <div class="stage-frame">
       <span class="bracket tl"></span><span class="bracket tr"></span>
       <span class="bracket bl"></span><span class="bracket br"></span>
-      <span class="tick t"></span><span class="tick b"></span>
-      <button id="reset-cam" class="reset-cam">+ RESET CAM</button>
+      <button id="reset-cam" class="glass-chip reset-cam">+ RESET CAM</button>
     </div>
 
-    <header class="topbar">
-      <div class="brand">SVG <span class="arrow">→</span> 3D</div>
+    <header class="topbar glass">
+      <div class="brand">SVG <span class="arrow">→</span> 3D <span class="brand-sub">particle forge</span></div>
       <div class="top-center">
-        <button id="change-dim" class="chip"><span class="dot">◍</span> CHANGE DIMENSION</button>
-        <span class="chip chip-accent">particles ✦</span>
+        <button id="change-dim" class="glass-chip"><span class="dot">◍</span> CHANGE DIMENSION</button>
+        <button id="shuffle" class="glass-chip">🎲 SHUFFLE</button>
       </div>
-      <div class="top-right">VECTOR <span class="arrow">→</span> VOLUME</div>
+      <div class="top-right">
+        <span id="fps" class="glass-chip fps" title="frames per second">60 FPS</span>
+        <button id="goto-export" class="btn-primary">EXPORT</button>
+      </div>
     </header>
 
     <!-- LEFT PANEL -->
-    <aside class="panel panel-left">
-      <button id="shuffle" class="ghost-btn">🎲 SHUFFLE</button>
-
-      <section class="block">
-        <div class="block-label"><i>01</i> SUBJECT</div>
-        <div class="pills" id="subject-pills"></div>
-        <label class="upload-btn">⭧ UPLOAD SVG
-          <input id="file-input" type="file" accept=".svg,image/svg+xml" hidden />
-        </label>
-        <input id="text-input" class="text-input" type="text" placeholder="or type text → 3d…" />
-      </section>
-
-      <section class="block">
-        <div class="block-label"><i>02</i> SHAPE</div>
-        <div class="slider" data-key="density"   data-min="0.05" data-max="1"   data-step="0.01" data-label="DENSITY"></div>
-        <div class="slider" data-key="depth"     data-min="0"    data-max="1.5" data-step="0.01" data-label="EXTRUDE DEPTH"></div>
-        <div class="slider" data-key="thickness" data-min="0"    data-max="1"   data-step="0.01" data-label="VOLUME FROM THICKNESS"></div>
-        <div class="slider" data-key="sampleRes" data-min="120"  data-max="600" data-step="10"   data-label="DETAIL"></div>
-        <div class="row toggles">
-          <button class="pill toggle-pill" data-toggle="useSvgColor">USE SVG COLORS</button>
+    <aside class="panel glass panel-left" id="panel-left" aria-label="Shape controls">
+      <section class="sec" data-sec="subject">
+        <button class="sec-head" aria-expanded="true"><i>01</i> SUBJECT <span class="chev">⌄</span></button>
+        <div class="sec-body">
+          <div class="pills" id="subject-pills"></div>
+          <label class="upload-btn">↑ UPLOAD SVG
+            <input id="file-input" type="file" accept=".svg,image/svg+xml" hidden />
+          </label>
+          <input id="text-input" class="text-input" type="text" placeholder="or type text → 3d…" aria-label="Text to convert to 3D" />
         </div>
-        <div class="color-row"><span class="s-label">PARTICLE COLOR</span><input type="color" class="swatch-input" data-color="uniformColor" /></div>
       </section>
 
-      <section class="block">
-        <div class="block-label"><i>03</i> LOOK</div>
-        <div class="slider" data-key="particleSize" data-min="1" data-max="20" data-step="0.5" data-label="SIZE"></div>
-        <div class="slider" data-key="opacity" data-min="0.1" data-max="1" data-step="0.01" data-label="OPACITY"></div>
-        <div class="row toggles">
-          <button class="pill toggle-pill" data-toggle="additive">GLOW</button>
-          <button class="pill toggle-pill" data-toggle="fog">DEPTH FOG</button>
+      <section class="sec" data-sec="shape">
+        <button class="sec-head" aria-expanded="true"><i>02</i> SHAPE <span class="chev">⌄</span></button>
+        <div class="sec-body">
+          <div class="slider" data-key="density"   data-min="0.05" data-max="1"   data-step="0.01" data-label="DENSITY"></div>
+          <div class="slider" data-key="depth"     data-min="0"    data-max="1.5" data-step="0.01" data-label="EXTRUDE DEPTH"></div>
+          <div class="slider" data-key="thickness" data-min="0"    data-max="1"   data-step="0.01" data-label="VOLUME FROM THICKNESS"></div>
+          <div class="slider" data-key="sampleRes" data-min="120"  data-max="600" data-step="10"   data-label="DETAIL"></div>
+          <div class="row toggles">
+            <button class="pill toggle-pill" data-toggle="useSvgColor">USE SVG COLORS</button>
+          </div>
+          <div class="color-row"><span class="s-label">PARTICLE COLOR</span><input type="color" class="swatch-input" data-color="uniformColor" aria-label="Particle color" /></div>
         </div>
-        <div class="color-row"><span class="s-label">BACKGROUND</span><input type="color" class="swatch-input" data-color="background" /></div>
       </section>
+
+      <section class="sec" data-sec="look">
+        <button class="sec-head" aria-expanded="true"><i>03</i> LOOK <span class="chev">⌄</span></button>
+        <div class="sec-body">
+          <div class="slider" data-key="particleSize" data-min="1" data-max="20" data-step="0.5" data-label="SIZE"></div>
+          <div class="slider" data-key="opacity" data-min="0.1" data-max="1" data-step="0.01" data-label="OPACITY"></div>
+          <div class="row toggles">
+            <button class="pill toggle-pill" data-toggle="additive">GLOW</button>
+            <button class="pill toggle-pill" data-toggle="fog">DEPTH FOG</button>
+          </div>
+          <div class="color-row"><span class="s-label">BACKGROUND</span><input type="color" class="swatch-input" data-color="background" aria-label="Background color" /></div>
+        </div>
+      </section>
+
+      <button id="reset-all" class="glass-chip reset-all" title="Restore default settings">↺ RESET ALL SETTINGS</button>
     </aside>
 
     <!-- RIGHT PANEL -->
-    <aside class="panel panel-right">
-      <section class="block">
-        <div class="block-label"><i>04</i> AMBIENT WAVE
-          <button class="pill mini toggle-pill inline" data-toggle="ambientWave">ON</button>
+    <aside class="panel glass panel-right" id="panel-right" aria-label="Motion and export controls">
+      <section class="sec" data-sec="ambient">
+        <button class="sec-head" aria-expanded="true"><i>04</i> AMBIENT WAVE <span class="chev">⌄</span></button>
+        <div class="sec-body">
+          <div class="row toggles"><button class="pill mini toggle-pill" data-toggle="ambientWave">ENABLED</button></div>
+          <div class="sub-label">DIRECTION</div>
+          <div class="pills tight" id="wavedir-pills"></div>
+          <div class="slider" data-key="idleAmp"   data-min="0"   data-max="0.6" data-step="0.01" data-label="AMPLITUDE"></div>
+          <div class="slider" data-key="idleFreq"  data-min="0.5" data-max="10"  data-step="0.1"  data-label="FREQUENCY"></div>
+          <div class="slider" data-key="idleSpeed" data-min="0"   data-max="4"   data-step="0.05" data-label="SPEED"></div>
         </div>
-        <div class="sub-label" style="margin-top:0">DIRECTION</div>
-        <div class="pills tight" id="wavedir-pills"></div>
-        <div class="slider" data-key="idleAmp"   data-min="0"   data-max="0.6" data-step="0.01" data-label="AMPLITUDE"></div>
-        <div class="slider" data-key="idleFreq"  data-min="0.5" data-max="10"  data-step="0.1"  data-label="FREQUENCY"></div>
-        <div class="slider" data-key="idleSpeed" data-min="0"   data-max="4"   data-step="0.05" data-label="SPEED"></div>
       </section>
 
-      <section class="block">
-        <div class="block-label"><i>05</i> ROTATION
-          <button class="pill mini toggle-pill inline" data-toggle="autoRotate">ON</button>
+      <section class="sec" data-sec="rotation">
+        <button class="sec-head" aria-expanded="true"><i>05</i> ROTATION <span class="chev">⌄</span></button>
+        <div class="sec-body">
+          <div class="row toggles"><button class="pill mini toggle-pill" data-toggle="autoRotate">ENABLED</button></div>
+          <div class="slider" data-key="rotateSpeed" data-min="-2" data-max="2" data-step="0.01" data-label="SPEED"></div>
+          <div class="slider" data-key="tilt" data-min="-1.2" data-max="1.2" data-step="0.01" data-label="TILT"></div>
         </div>
-        <div class="slider" data-key="rotateSpeed" data-min="-2" data-max="2" data-step="0.01" data-label="SPEED"></div>
-        <div class="slider" data-key="tilt" data-min="-1.2" data-max="1.2" data-step="0.01" data-label="TILT"></div>
       </section>
 
-      <section class="block">
-        <div class="block-label"><i>06</i> CURSOR WAVE
-          <button class="pill mini toggle-pill inline" data-toggle="cursorWave">ON</button>
+      <section class="sec" data-sec="cursor">
+        <button class="sec-head" aria-expanded="true"><i>06</i> CURSOR WAVE <span class="chev">⌄</span></button>
+        <div class="sec-body">
+          <div class="row toggles"><button class="pill mini toggle-pill" data-toggle="cursorWave">ENABLED</button></div>
+          <div class="slider" data-key="waveAmp" data-min="0" data-max="1.5" data-step="0.01" data-label="AMPLITUDE"></div>
+          <div class="slider" data-key="waveFreq" data-min="2" data-max="40" data-step="0.5" data-label="FREQUENCY"></div>
+          <div class="slider" data-key="waveSpeed" data-min="0" data-max="20" data-step="0.5" data-label="RIPPLE SPEED"></div>
+          <div class="slider" data-key="cursorRadius" data-min="0.1" data-max="1.5" data-step="0.01" data-label="REACH"></div>
         </div>
-        <div class="slider" data-key="waveAmp" data-min="0" data-max="1.5" data-step="0.01" data-label="AMPLITUDE"></div>
-        <div class="slider" data-key="waveFreq" data-min="2" data-max="40" data-step="0.5" data-label="FREQUENCY"></div>
-        <div class="slider" data-key="waveSpeed" data-min="0" data-max="20" data-step="0.5" data-label="RIPPLE SPEED"></div>
-        <div class="slider" data-key="cursorRadius" data-min="0.1" data-max="1.5" data-step="0.01" data-label="REACH"></div>
       </section>
 
-      <section class="block">
-        <div class="block-label"><i>07</i> FILM &amp; EXPORT</div>
-        <div class="slider" data-key="exportFps" data-min="10" data-max="60" data-step="1" data-label="FPS"></div>
-        <div class="slider" data-key="exportDuration" data-min="1" data-max="12" data-step="0.5" data-label="LOOP SECONDS"></div>
-        <div class="slider" data-key="exportRotations" data-min="0" data-max="4" data-step="1" data-label="ROTATIONS / LOOP"></div>
-        <div class="slider" data-key="webmSeconds" data-min="2" data-max="30" data-step="1" data-label="WEBM SECONDS"></div>
+      <section class="sec" data-sec="export" id="export-section">
+        <button class="sec-head" aria-expanded="true"><i>07</i> FILM &amp; EXPORT <span class="chev">⌄</span></button>
+        <div class="sec-body">
+          <div class="slider" data-key="exportFps" data-min="10" data-max="60" data-step="1" data-label="FPS"></div>
+          <div class="slider" data-key="exportDuration" data-min="1" data-max="12" data-step="0.5" data-label="LOOP SECONDS"></div>
+          <div class="slider" data-key="exportRotations" data-min="0" data-max="4" data-step="1" data-label="ROTATIONS / LOOP"></div>
+          <div class="slider" data-key="webmSeconds" data-min="2" data-max="30" data-step="1" data-label="WEBM SECONDS"></div>
 
-        <div class="sub-label">EXPORT RES</div>
-        <div class="pills tight" id="res-pills"></div>
-        <div class="row toggles"><button class="pill mini toggle-pill" data-toggle="exportTransparent">TRANSPARENT</button></div>
+          <div class="sub-label">EXPORT RES</div>
+          <div class="pills tight" id="res-pills"></div>
+          <div class="row toggles"><button class="pill mini toggle-pill" data-toggle="exportTransparent">TRANSPARENT</button></div>
 
-        <div class="sub-label">RENDER</div>
-        <div class="pills tight" id="export-pills"></div>
-        <div class="status" id="status">ready</div>
+          <div class="sub-label">RENDER</div>
+          <div class="pills tight" id="export-pills"></div>
+          <div class="export-progress hidden" id="export-progress"><div class="bar"></div></div>
+          <div class="status" id="status" role="status">ready</div>
+        </div>
       </section>
     </aside>
 
+    <!-- mobile drawer toolbar -->
+    <nav class="drawerbar glass" aria-label="Panel toggles">
+      <button id="drawer-left" class="glass-chip">◧ SHAPE</button>
+      <button id="drawer-right" class="glass-chip">MOTION ◨</button>
+    </nav>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+
     <div id="drop-overlay" class="drop-overlay hidden">
-      <div class="drop-card"><div class="drop-icon">⬇</div>Drop an SVG to forge it into particles</div>
+      <div class="drop-card glass"><div class="drop-icon">⬇</div>Drop an SVG to forge it into particles</div>
     </div>
 
-    <div id="embed-modal" class="modal hidden">
-      <div class="modal-card">
-        <div class="modal-head"><span>EMBED CODE</span><button id="embed-close" class="ghost-btn tiny">✕</button></div>
+    <div id="embed-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Embed code">
+      <div class="modal-card glass">
+        <div class="modal-head"><span>EMBED CODE</span><button id="embed-close" class="glass-chip tiny" aria-label="Close">✕</button></div>
         <p class="modal-sub">Paste this into any webpage. Loads Three.js from a CDN and renders your shape live.</p>
         <textarea id="embed-code" class="embed-code" readonly spellcheck="false"></textarea>
         <div class="modal-actions">

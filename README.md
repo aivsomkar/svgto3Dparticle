@@ -17,7 +17,13 @@ npm run build    # production build → dist/
 
 ## Panel guide
 
-The UI is organized into numbered sections (left + right) over a full-bleed stage.
+The UI is a liquid-glass control surface: two floating frosted panels over a
+full-bleed stage, with collapsible numbered sections. Every slider has an
+editable numeric readout; settings (including your shape) persist across
+reloads via `localStorage`, and **RESET ALL SETTINGS** restores defaults.
+Failures (malformed SVGs, export errors) surface as toast notifications. A
+live FPS meter sits in the top bar next to the **EXPORT** shortcut. Under
+1024px the panels become slide-over drawers toggled from a bottom bar.
 
 - **01 SUBJECT** — 16 built-in shapes (star, bolt, heart, gear, flower…),
   **UPLOAD SVG**, drag-and-drop *anywhere*, or `type text → 3d`.
@@ -34,7 +40,8 @@ The UI is organized into numbered sections (left + right) over a full-bleed stag
   export resolution (512 → 4K), transparent toggle, and the export buttons.
 
 Top bar: **CHANGE DIMENSION** toggles perspective ↔ orthographic camera.
-**SHUFFLE** randomizes the composition. Drag to orbit; **RESET CAM** recenters.
+**SHUFFLE** randomizes the composition. **EXPORT** jumps to the render
+controls. Drag to orbit; **RESET CAM** recenters.
 
 ## Displacement is depth-only
 
@@ -67,7 +74,7 @@ turntable). Honors the Transparent toggle. Verified to run standalone.
 | File | Role |
 |---|---|
 | [main.js](src/main.js) | scene, loop, motion modes, presets/material/scene wiring, export driver |
-| [ui.js](src/ui.js) | builds the pill/slider panel, film strip, embed modal |
+| [ui.js](src/ui.js) | builds the glass panels: sliders + numeric inputs, collapsible sections, toasts, embed modal |
 | [presets.js](src/presets.js) | built-in shapes + text→SVG |
 | [svgSampler.js](src/svgSampler.js) | rasterize SVG → extruded particle positions |
 | [particles.js](src/particles.js) | `THREE.Points` system + shader material |
