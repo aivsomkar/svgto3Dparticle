@@ -149,8 +149,30 @@ function applyConfig() {
   uniforms.uUseFog.value = config.fog ? 1 : 0;
   uniforms.uFogColor.value.set(config.background);
   particles.setBlending(config.additive);
-  renderer.setClearColor(new THREE.Color(config.background), config.exportTransparent ? 0 : 1);
-  document.documentElement.style.setProperty("--bg", config.background);
+  // Live view clears transparent so the CSS gradient backdrop shows through;
+  // exports opt back into an opaque clear (see doWebM / offline compositing).
+  renderer.setClearColor(new THREE.Color(config.background), 0);
+  const root = document.documentElement.style;
+  root.setProperty("--bg", config.background);
+  const { a, b } = backdropTints(config.background);
+  root.setProperty("--bg-a", a);
+  root.setProperty("--bg-b", b);
+}
+
+// Two hue-shifted, slightly lifted tint stops derived from the background so
+// the backdrop gradient always fits the chosen color. Near-grayscale
+// backgrounds get a cool blue-teal cast instead of a meaningless hue.
+function backdropTints(hex) {
+  const c = new THREE.Color(hex);
+  const hsl = {};
+  c.getHSL(hsl);
+  const h = hsl.s < 0.05 ? 0.58 : hsl.h;
+  const s = Math.max(hsl.s, 0.22);
+  const stop = (dh, dl) => {
+    const hue = Math.round((((h + dh) % 1) + 1) % 1 * 360);
+    return `hsl(${hue}, ${Math.round(Math.min(1, s + 0.08) * 100)}%, ${Math.round(Math.min(0.32, hsl.l + dl) * 100)}%)`;
+  };
+  return { a: stop(0.07, 0.09), b: stop(-0.07, 0.05) };
 }
 
 // ---------------------------------------------------------------------------
@@ -353,16 +375,20 @@ function doWebM() {
   ui.setBusy(true);
   ui.setStatus(`recording WebM… ${config.webmSeconds}s`);
   try {
+    // MediaRecorder captures the canvas only — give it an opaque background
+    // for the recording unless the user asked for transparency.
+    if (!config.exportTransparent) renderer.setClearColor(new THREE.Color(config.background), 1);
     const rec = recordWebM(renderer, { fps: 60, bitrate: 40_000_000, transparent: config.exportTransparent });
     rec.done
       .then(() => { ui.setStatus("WebM saved ✓"); ui.toast("WebM saved to your downloads.", "ok"); })
       .catch((err) => { console.error(err); ui.toast(`WebM recording failed — ${err.message || "unknown error"}.`, "err"); })
-      .finally(() => { busy = false; ui.setBusy(false); });
+      .finally(() => { busy = false; ui.setBusy(false); applyConfig(); });
     setTimeout(() => rec.stop(), config.webmSeconds * 1000);
   } catch (err) {
     console.error(err);
     busy = false;
     ui.setBusy(false);
+    applyConfig();
     ui.toast(`Couldn't start the WebM recording — ${err.message || "unknown error"}.`, "err");
   }
 }

@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
+    <div class="bg" aria-hidden="true"></div>
     <canvas id="scene"></canvas>
 
     <button id="reset-cam" class="chip reset-cam">Reset camera</button>
@@ -89,8 +90,15 @@
         <div class="slider" data-key="cursorRadius" data-min="0.1" data-max="1.5" data-step="0.01" data-label="Reach"></div>
       </div>
 
-      <div class="sec" id="export-section">
-        <div class="sec-label">Export</div>
+      <div class="sec">
+        <button id="reset-all" class="btn-more" title="Restore default settings">Reset all settings</button>
+      </div>
+    </aside>
+
+    <div id="export-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Export">
+      <div class="modal-card export-card glass">
+        <div class="modal-head"><span>Export</span><button id="export-close" class="chip tiny" aria-label="Close">✕</button></div>
+
         <div class="slider" data-key="exportFps" data-min="10" data-max="60" data-step="1" data-label="FPS"></div>
         <div class="slider" data-key="exportDuration" data-min="1" data-max="12" data-step="0.5" data-label="Loop seconds"></div>
         <div class="slider" data-key="exportRotations" data-min="0" data-max="4" data-step="1" data-label="Rotations / loop"></div>
@@ -104,10 +112,8 @@
         <div class="btn-grid cols-2" id="export-pills"></div>
         <div class="export-progress hidden" id="export-progress"><div class="bar"></div></div>
         <div class="status" id="status" role="status">ready</div>
-
-        <button id="reset-all" class="btn-more" title="Restore default settings">Reset all settings</button>
       </div>
-    </aside>
+    </div>
 
     <!-- mobile drawer toolbar -->
     <nav class="drawerbar glass" aria-label="Panel toggles">

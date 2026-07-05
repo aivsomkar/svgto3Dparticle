@@ -188,10 +188,10 @@ export function buildUI(config, actions) {
   $("reset-cam").onclick = () => actions.resetCam();
   $("shuffle").onclick = () => actions.shuffle();
   $("reset-all").onclick = () => actions.resetAll();
-  $("goto-export").onclick = () => {
-    document.getElementById("panel-right").classList.add("open");
-    $("export-section").scrollIntoView({ behavior: "smooth", block: "nearest" });
-  };
+  const exportModal = $("export-modal");
+  $("goto-export").onclick = () => exportModal.classList.remove("hidden");
+  $("export-close").onclick = () => exportModal.classList.add("hidden");
+  exportModal.addEventListener("click", (e) => { if (e.target === exportModal) exportModal.classList.add("hidden"); });
   const setCamLabel = (label) => ($("cam-label").textContent = label);
 
   // ---- mobile drawers ----------------------------------------------------
@@ -203,7 +203,11 @@ export function buildUI(config, actions) {
   const modal = $("embed-modal");
   $("embed-close").onclick = () => modal.classList.add("hidden");
   modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.add("hidden"); });
-  window.addEventListener("keydown", (e) => { if (e.key === "Escape") modal.classList.add("hidden"); });
+  window.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (!modal.classList.contains("hidden")) modal.classList.add("hidden");
+    else exportModal.classList.add("hidden");
+  });
   $("embed-copy").onclick = async () => {
     try {
       await navigator.clipboard.writeText($("embed-code").value);
