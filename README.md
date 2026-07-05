@@ -17,31 +17,34 @@ npm run build    # production build → dist/
 
 ## Panel guide
 
-The UI is a liquid-glass control surface: two floating frosted panels over a
-full-bleed stage, with collapsible numbered sections. Every slider has an
-editable numeric readout; settings (including your shape) persist across
-reloads via `localStorage`, and **RESET ALL SETTINGS** restores defaults.
-Failures (malformed SVGs, export errors) surface as toast notifications. A
-live FPS meter sits in the top bar next to the **EXPORT** shortcut. Under
-1024px the panels become slide-over drawers toggled from a bottom bar.
+The UI is a liquid-glass control surface in the gradient-lab idiom: two
+floating frosted panels over a full-bleed stage, neutral glass buttons with
+white active states, and sentence-case labels.
 
-- **01 SUBJECT** — 16 built-in shapes (star, bolt, heart, gear, flower…),
-  **UPLOAD SVG**, drag-and-drop *anywhere*, or `type text → 3d`.
-- **02 SHAPE** — Density, Extrude depth, **Volume from thickness**, Detail,
-  Use-SVG-colors, Particle color. *Volume from thickness* runs a distance
-  transform over the shape so chunky regions bulge into a deeper, denser volume
-  while thin strokes stay shallow (0 = uniform slab, 1 = fully volumetric).
-- **03 LOOK** — Particle size, Opacity, Glow (additive), Depth fog, Background.
-- **04 AMBIENT WAVE** — on/off, **Direction** (Radial / Horizontal / Vertical /
-  Diagonal), Amplitude, Frequency, Speed.
-- **05 ROTATION** — on/off, Speed, Tilt.
-- **06 CURSOR WAVE** — on/off, Amplitude, Frequency, Ripple speed, Reach.
-- **07 FILM & EXPORT** — FPS, Loop seconds, Rotations/loop, WebM seconds,
-  export resolution (512 → 4K), transparent toggle, and the export buttons.
+- **Left panel** — Subject grid (9 shapes + *Show more*), Upload SVG, text →
+  3D input, and a **Presets** list (Aurora, Sunset, Ember, Frost, Neon, Ink,
+  Hologram, Candy) that restyles the current shape in one click.
+- **Right panel** — Colors (swatches, *Use SVG colors*, *Glow*, **Randomize
+  palette**), Shape sliders, Motion (ambient wave / rotation / cursor wave),
+  and Export.
 
-Top bar: **CHANGE DIMENSION** toggles perspective ↔ orthographic camera.
-**SHUFFLE** randomizes the composition. **EXPORT** jumps to the render
-controls. Drag to orbit; **RESET CAM** recenters.
+Every slider has an editable mono numeric readout; settings (including your
+shape) persist across reloads via `localStorage`, and **Reset all settings**
+restores defaults. Failures (malformed SVGs, export errors) surface as toast
+notifications. A live fps meter sits in the top bar next to the camera
+toggle, shuffle, and the white **Export** button. Under 1024px the panels
+become slide-over drawers toggled from a bottom bar.
+
+Notes on specific controls: *Volume from thickness* runs a distance transform
+over the shape so chunky regions bulge into a deeper, denser volume while
+thin strokes stay shallow (0 = uniform slab, 1 = fully volumetric). Ambient
+wave direction is Radial / Horizontal / Vertical / Diagonal. Export offers
+FPS, loop seconds, rotations/loop, WebM seconds, resolution (512 → 4K), and a
+transparent toggle. Drag-and-drop an SVG *anywhere*.
+
+Top bar: the camera chip toggles perspective ↔ orthographic, 🎲 shuffles the
+composition, **Export** jumps to the render controls. Drag to orbit; **Reset
+camera** recenters.
 
 ## Displacement is depth-only
 

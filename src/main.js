@@ -4,7 +4,7 @@ import { ParticleSystem } from "./particles.js";
 import { sampleSVG } from "./svgSampler.js";
 import { recordWebM, exportGIF, exportPNGSequence } from "./exporters.js";
 import { buildUI } from "./ui.js";
-import { SHAPES, SHAPE_KEYS, textToSVG } from "./presets.js";
+import { SHAPES, SHAPE_KEYS, textToSVG, LOOK_PRESETS } from "./presets.js";
 import { buildEmbedSnippet, buildEmbedHTML } from "./embed.js";
 
 const TWO_PI = Math.PI * 2;
@@ -77,8 +77,6 @@ for (const k of Object.keys(DEFAULTS)) {
     config[k] = stored.config[k];
   }
 }
-const collapsedSections = { ...(stored.collapsed || {}) };
-
 let saveTimer;
 function saveSoon() {
   clearTimeout(saveTimer);
@@ -86,7 +84,6 @@ function saveSoon() {
     try {
       localStorage.setItem(STORE_KEY, JSON.stringify({
         config,
-        collapsed: collapsedSections,
         svg: currentSVG && currentSVG.length <= MAX_PERSISTED_SVG ? currentSVG : null,
       }));
     } catch { /* storage full / disabled — persistence is best-effort */ }
@@ -389,17 +386,43 @@ const actions = {
     saveSoon();
   },
 
-  sectionToggled(sec, collapsed) {
-    collapsedSections[sec] = collapsed;
+  applyPreset(name) {
+    const preset = LOOK_PRESETS.find((p) => p.name === name);
+    if (!preset) return;
+    const needsRebuild = config.useSvgColor !== preset.settings.useSvgColor;
+    Object.assign(config, preset.settings);
+    applyConfig();
+    if (needsRebuild && config.useSvgColor) rebuild();
+    else if (!config.useSvgColor) particles.setUniformColor(config.uniformColor);
+    ui.sync();
+    saveSoon();
+  },
+
+  randomizePalette() {
+    const hue = Math.floor(Math.random() * 360);
+    const particle = `hsl(${hue}, ${70 + Math.random() * 25}%, ${65 + Math.random() * 15}%)`;
+    const bgHue = (hue + 180 + Math.floor(Math.random() * 60) - 30) % 360;
+    // colors go through a canvas to normalize hsl() → #rrggbb for the color inputs
+    const toHex = (css) => {
+      const c = document.createElement("canvas").getContext("2d");
+      c.fillStyle = css;
+      return c.fillStyle;
+    };
+    config.uniformColor = toHex(particle);
+    config.background = toHex(`hsl(${bgHue}, ${30 + Math.random() * 30}%, ${4 + Math.random() * 6}%)`);
+    config.useSvgColor = false;
+    applyConfig();
+    particles.setUniformColor(config.uniformColor);
+    ui.clearPreset();
+    ui.sync();
     saveSoon();
   },
 
   resetAll() {
     try { localStorage.removeItem(STORE_KEY); } catch { /* ignore */ }
     Object.assign(config, DEFAULTS);
-    for (const k of Object.keys(collapsedSections)) delete collapsedSections[k];
-    ui.setCollapsed({});
     applyConfig();
+    ui.clearPreset();
     ui.sync();
     actions.setSubject(config.subject);
     ui.toast("Settings restored to defaults.", "ok");
@@ -415,6 +438,7 @@ const actions = {
     activeCamera = activeCamera === perspCam ? orthoCam : perspCam;
     activeCamera.position.set(0, 0, 5);
     buildControls();
+    ui.setCamLabel(activeCamera === perspCam ? "Perspective" : "Orthographic");
   },
   shuffle() {
     config.subject = pick(SHAPE_KEYS);
@@ -432,6 +456,7 @@ const actions = {
     config.background = pick(["#0c1016", "#04060a", "#000000", "#10141b"]);
     applyConfig();
     actions.setSubject(config.subject);
+    ui.clearPreset();
     ui.sync();
   },
   exportFormat(name) {
@@ -460,7 +485,6 @@ const actions = {
 // Boot — restore persisted scene, fall back to defaults on any failure
 // ---------------------------------------------------------------------------
 const ui = buildUI(config, actions);
-ui.setCollapsed(collapsedSections);
 applyConfig();
 onResize();
 frame();

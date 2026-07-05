@@ -1,48 +1,34 @@
-import { SHAPE_KEYS } from "./presets.js";
+import { SHAPE_KEYS, LOOK_PRESETS } from "./presets.js";
 
 const RES = [["512", 512], ["1024", 1024], ["2048", 2048], ["4K", 4096]];
-const EXPORTS = ["gif", "webm", "png", "embed"];
+const EXPORTS = [["gif", "GIF"], ["webm", "WebM"], ["png", "PNG"], ["embed", "Get code"]];
 const WAVE_DIRS = ["radial", "horizontal", "vertical", "diagonal"];
+const SUBJECTS_VISIBLE = 9; // grid shows 3×3, the rest behind "Show more"
 
-function pill(text, active = false) {
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+function gbtn(text, active = false) {
   const b = document.createElement("button");
-  b.className = "pill" + (active ? " active" : "");
+  b.className = "gbtn" + (active ? " active" : "");
   b.textContent = text;
   return b;
 }
 
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-
 // Builds the control panel over the static markup in index.html.
 // `actions` (from main.js) provides: setSubject, uploadSVG, setText, change(key),
 // resetCam, changeDim, shuffle, exportFormat, showEmbed, downloadEmbed, resetAll,
-// sectionToggled(sec, collapsed).
+// applyPreset, randomizePalette.
 export function buildUI(config, actions) {
   const $ = (id) => document.getElementById(id);
   const sliders = [];
 
-  // ---- collapsible sections ----------------------------------------------
-  document.querySelectorAll(".sec").forEach((sec) => {
-    const head = sec.querySelector(".sec-head");
-    head.addEventListener("click", () => {
-      const collapsed = sec.classList.toggle("collapsed");
-      head.setAttribute("aria-expanded", String(!collapsed));
-      actions.sectionToggled?.(sec.dataset.sec, collapsed);
-    });
-  });
-  const setCollapsed = (map = {}) => {
-    document.querySelectorAll(".sec").forEach((sec) => {
-      const collapsed = !!map[sec.dataset.sec];
-      sec.classList.toggle("collapsed", collapsed);
-      sec.querySelector(".sec-head").setAttribute("aria-expanded", String(!collapsed));
-    });
-  };
-
-  // ---- 01 SUBJECT --------------------------------------------------------
+  // ---- Subject grid + show more ------------------------------------------
   const subjEls = [];
-  SHAPE_KEYS.forEach((k) => {
-    const b = pill(k.toUpperCase(), config.subject === k);
+  SHAPE_KEYS.forEach((k, i) => {
+    const b = gbtn(cap(k), config.subject === k);
     b.dataset.key = k;
+    if (i >= SUBJECTS_VISIBLE) b.classList.add("hidden");
     b.onclick = () => {
       config.subject = k;
       subjEls.forEach((e) => e.classList.toggle("active", e.dataset.key === config.subject));
@@ -51,7 +37,17 @@ export function buildUI(config, actions) {
     $("subject-pills").appendChild(b);
     subjEls.push(b);
   });
-  const clearSubject = () => subjEls.forEach((e) => e.classList.remove("active"));
+  const moreBtn = $("subject-more");
+  const hiddenCount = Math.max(0, SHAPE_KEYS.length - SUBJECTS_VISIBLE);
+  let expanded = false;
+  const renderMore = () => {
+    moreBtn.textContent = expanded ? "Show less" : `Show more (+${hiddenCount})`;
+    moreBtn.setAttribute("aria-expanded", String(expanded));
+    subjEls.forEach((e, i) => e.classList.toggle("hidden", !expanded && i >= SUBJECTS_VISIBLE));
+  };
+  if (hiddenCount === 0) moreBtn.classList.add("hidden");
+  moreBtn.onclick = () => { expanded = !expanded; renderMore(); };
+  renderMore();
 
   $("file-input").addEventListener("change", (e) => {
     const f = e.target.files?.[0];
@@ -67,7 +63,24 @@ export function buildUI(config, actions) {
     }, 350);
   });
 
-  // ---- sliders (data-key) — range + numeric input + glow fill -------------
+  // ---- Presets list --------------------------------------------------------
+  const presetEls = [];
+  LOOK_PRESETS.forEach((p) => {
+    const row = document.createElement("button");
+    row.className = "preset-row";
+    row.innerHTML = `<span></span><span class="tag"></span>`;
+    row.firstElementChild.textContent = p.name;
+    row.lastElementChild.textContent = p.tag;
+    row.onclick = () => {
+      presetEls.forEach((e) => e.classList.toggle("active", e === row));
+      actions.applyPreset(p.name);
+    };
+    $("preset-list").appendChild(row);
+    presetEls.push(row);
+  });
+  const clearPreset = () => presetEls.forEach((e) => e.classList.remove("active"));
+
+  // ---- sliders (data-key) — range + numeric readout + white fill -----------
   document.querySelectorAll(".slider[data-key]").forEach((wrap) => {
     const key = wrap.dataset.key;
     const min = +wrap.dataset.min, max = +wrap.dataset.max, step = +wrap.dataset.step;
@@ -114,7 +127,7 @@ export function buildUI(config, actions) {
     sliders.push({ key, paint });
   });
 
-  // ---- toggle pills (data-toggle) ----------------------------------------
+  // ---- toggle buttons (data-toggle) ----------------------------------------
   const toggles = [];
   document.querySelectorAll("[data-toggle]").forEach((el) => {
     const key = el.dataset.toggle;
@@ -133,10 +146,12 @@ export function buildUI(config, actions) {
     colors.push({ key, el });
   });
 
+  $("randomize-palette").onclick = () => actions.randomizePalette();
+
   // ---- wave direction (single-select) ------------------------------------
   const dirEls = [];
   WAVE_DIRS.forEach((d) => {
-    const b = pill(d.toUpperCase(), config.waveDir === d);
+    const b = gbtn(cap(d), config.waveDir === d);
     b.dataset.dir = d;
     b.onclick = () => {
       config.waveDir = d;
@@ -150,7 +165,7 @@ export function buildUI(config, actions) {
   // ---- export res + render buttons ---------------------------------------
   const resEls = [];
   RES.forEach(([label, value]) => {
-    const b = pill(label, config.exportRes === value);
+    const b = gbtn(label, config.exportRes === value);
     b.dataset.val = value;
     b.onclick = () => {
       config.exportRes = value;
@@ -161,8 +176,8 @@ export function buildUI(config, actions) {
     resEls.push(b);
   });
   const exportBtns = [];
-  EXPORTS.forEach((name) => {
-    const b = pill(name === "embed" ? "⧉ GET CODE" : name.toUpperCase());
+  EXPORTS.forEach(([name, label]) => {
+    const b = gbtn(label);
     b.onclick = () => actions.exportFormat(name);
     $("export-pills").appendChild(b);
     exportBtns.push(b);
@@ -174,12 +189,10 @@ export function buildUI(config, actions) {
   $("shuffle").onclick = () => actions.shuffle();
   $("reset-all").onclick = () => actions.resetAll();
   $("goto-export").onclick = () => {
-    const sec = $("export-section");
-    sec.classList.remove("collapsed");
-    sec.querySelector(".sec-head").setAttribute("aria-expanded", "true");
     document.getElementById("panel-right").classList.add("open");
-    sec.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    $("export-section").scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
+  const setCamLabel = (label) => ($("cam-label").textContent = label);
 
   // ---- mobile drawers ----------------------------------------------------
   const left = $("panel-left"), right = $("panel-right");
@@ -194,8 +207,8 @@ export function buildUI(config, actions) {
   $("embed-copy").onclick = async () => {
     try {
       await navigator.clipboard.writeText($("embed-code").value);
-      $("embed-copy").textContent = "✓ COPIED";
-      setTimeout(() => ($("embed-copy").textContent = "⧉ COPY SNIPPET"), 1400);
+      $("embed-copy").textContent = "Copied ✓";
+      setTimeout(() => ($("embed-copy").textContent = "Copy snippet"), 1400);
     } catch {
       toast("Couldn't access the clipboard — select the code and copy manually.", "err");
     }
@@ -203,7 +216,7 @@ export function buildUI(config, actions) {
   $("embed-download").onclick = () => actions.downloadEmbed();
 
   // ---- toasts --------------------------------------------------------------
-  const ICONS = { ok: "✓", err: "✕", info: "✦" };
+  const ICONS = { ok: "✓", err: "✕", info: "•" };
   function toast(message, type = "info", ms = 3600) {
     const t = document.createElement("div");
     t.className = `toast ${type}`;
@@ -226,7 +239,7 @@ export function buildUI(config, actions) {
 
   // ---- fps ------------------------------------------------------------------
   const fpsEl = $("fps");
-  const setFps = (n) => (fpsEl.textContent = `${Math.round(n)} FPS`);
+  const setFps = (n) => (fpsEl.textContent = `${Math.round(n)} fps`);
 
   function sync() {
     subjEls.forEach((e) => e.classList.toggle("active", e.dataset.key === config.subject));
@@ -242,7 +255,8 @@ export function buildUI(config, actions) {
     toast,
     setBusy,
     setFps,
-    setCollapsed,
+    setCamLabel,
+    clearPreset,
     showEmbed(code) { $("embed-code").value = code; modal.classList.remove("hidden"); },
     progress: (label) => (p) => {
       const pct = Math.min(100, Math.round(p * 100));
