@@ -219,7 +219,7 @@ function backdropTints(hex) {
 let hasShape = false;
 let currentSVG = typeof stored.svg === "string" && stored.svg ? stored.svg : null;
 
-async function loadSVGText(svgText, { announce = "" } = {}) {
+async function loadSVGText(svgText, { announce = "", autoContrast = false } = {}) {
   const data = await sampleSVG(svgText, {
     density: config.density, depth: config.depth, thickness: config.thickness,
     sampleRes: config.sampleRes, useSvgColor: config.useSvgColor,
@@ -228,6 +228,23 @@ async function loadSVGText(svgText, { announce = "" } = {}) {
   currentSVG = svgText;
   particles.setData(data);
   if (!config.useSvgColor) particles.setUniformColor(config.uniformColor);
+
+  // New artwork whose own colors vanish against the scene background (e.g. a
+  // black logo on our dark stage) → fall back to the particle color, visibly.
+  if (autoContrast && config.useSvgColor) {
+    const c = data.colors, n = data.count;
+    let lum = 0;
+    for (let i = 0; i < n * 3; i += 3) lum += 0.2126 * c[i] + 0.7152 * c[i + 1] + 0.0722 * c[i + 2];
+    lum /= n;
+    const bgc = new THREE.Color(config.background);
+    const bgLum = 0.2126 * bgc.r + 0.7152 * bgc.g + 0.0722 * bgc.b;
+    if (Math.abs(lum - bgLum) < 0.18) {
+      config.useSvgColor = false;
+      particles.setUniformColor(config.uniformColor);
+      ui.sync();
+      ui.toast("The artwork's own colors blend into the background — switched to particle color. Toggle 'Use SVG colors' to go back.", "info");
+    }
+  }
   if (config.assemble) uniforms.uAssemble.value = 0; // replay the fly-in
   hasShape = true;
   ui.setStatus(`${data.count.toLocaleString()} particles`);
@@ -237,9 +254,9 @@ async function loadSVGText(svgText, { announce = "" } = {}) {
 }
 
 // Wrapper for every user-initiated load: reports failures instead of dying silently.
-async function tryLoadSVG(svgText, { announce = "", source = "SVG" } = {}) {
+async function tryLoadSVG(svgText, { announce = "", source = "SVG", autoContrast = false } = {}) {
   try {
-    await loadSVGText(svgText, { announce });
+    await loadSVGText(svgText, { announce, autoContrast });
     return true;
   } catch (err) {
     console.error(err);
@@ -254,7 +271,7 @@ async function loadAsCustom(svgText, opts) {
   const prevSubject = config.subject;
   config.subject = "";
   ui.sync();
-  const ok = await tryLoadSVG(svgText, opts);
+  const ok = await tryLoadSVG(svgText, { ...opts, autoContrast: true });
   if (!ok) { config.subject = prevSubject; ui.sync(); }
   return ok;
 }

@@ -99,9 +99,18 @@ function svgDims(t){
   if(!w||!h){ const wm=t.match(/\\bwidth\\s*=\\s*["']?\\s*([\\d.]+)/i),hm=t.match(/\\bheight\\s*=\\s*["']?\\s*([\\d.]+)/i); if(wm&&hm){w=parseFloat(wm[1]);h=parseFloat(hm[1]);} }
   if(!w||!h){ w=512; h=512; } return {w,h};
 }
-function distXf(data,cw,ch,th){
+function detectBg(data,cw,ch,th){
+  const m=new Map(); let tot=0;
+  const v=(x,y)=>{const i=(y*cw+x)*4; tot++; if(data[i+3]<=th)return;
+    const k=(data[i]>>4<<8)|(data[i+1]>>4<<4)|(data[i+2]>>4);
+    const e=m.get(k)||{n:0,r:0,g:0,b:0}; e.n++; e.r+=data[i]; e.g+=data[i+1]; e.b+=data[i+2]; m.set(k,e);};
+  for(let x=0;x<cw;x++){v(x,0);v(x,ch-1);} for(let y=1;y<ch-1;y++){v(0,y);v(cw-1,y);}
+  let b=null; for(const e of m.values()) if(!b||e.n>b.n) b=e;
+  return b&&b.n>=tot*0.5?{r:b.r/b.n,g:b.g/b.n,b:b.b/b.n}:null;
+}
+function distXf(mask,cw,ch){
   const INF=1e9,D1=1,D2=1.4142,dist=new Float32Array(cw*ch);
-  for(let i=0;i<cw*ch;i++) dist[i]=data[i*4+3]>th?INF:0;
+  for(let i=0;i<cw*ch;i++) dist[i]=mask[i]?INF:0;
   for(let y=0;y<ch;y++)for(let x=0;x<cw;x++){const i=y*cw+x; if(!dist[i])continue; let v=dist[i];
     if(x>0)v=Math.min(v,dist[i-1]+D1); if(y>0)v=Math.min(v,dist[i-cw]+D1);
     if(x>0&&y>0)v=Math.min(v,dist[i-cw-1]+D2); if(x<cw-1&&y>0)v=Math.min(v,dist[i-cw+1]+D2); dist[i]=v;}
@@ -118,23 +127,38 @@ function sample(){
     const res=360, sc=res/Math.max(w,h), cw=Math.round(w*sc), ch=Math.round(h*sc);
     const cv=document.createElement("canvas"); cv.width=cw; cv.height=ch;
     const cx=cv.getContext("2d",{willReadFrequently:true}); cx.drawImage(img,0,0,cw,ch);
-    const data=cx.getImageData(0,0,cw,ch).data, norm=2/Math.max(cw,ch);
-    const dist=distXf(data,cw,ch,40); let md=1; for(let i=0;i<dist.length;i++) if(dist[i]<1e8&&dist[i]>md) md=dist[i];
+    const data=cx.getImageData(0,0,cw,ch).data;
+    // drop a solid background matte, mask ink, crop to its bounding box
+    const bg=detectBg(data,cw,ch,40), TOL2=60*60;
+    const build=(useBg)=>{ const mask=new Uint8Array(cw*ch), con=new Float32Array(cw*ch);
+      let ink=0,op=0,mc=1,x0=cw,y0=ch,x1=-1,y1=-1;
+      for(let y=0;y<ch;y++)for(let x=0;x<cw;x++){ const p=y*cw+x,i=p*4;
+        if(data[i+3]<=40) continue; op++;
+        let c2=0;
+        if(useBg){ const dr=data[i]-bg.r,dg=data[i+1]-bg.g,db=data[i+2]-bg.b; c2=(dr*dr+dg*dg+db*db)/3; if(c2<=TOL2) continue; }
+        mask[p]=1; con[p]=c2; if(c2>mc)mc=c2; ink++;
+        if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+      return {mask,con,ink,op,mc,x0,y0,x1,y1}; };
+    let M=build(!!bg); if(bg&&M.ink<Math.max(20,M.op*0.002)) M=build(false);
+    const dist=distXf(M.mask,cw,ch); let md=1; for(let i=0;i<dist.length;i++) if(dist[i]<1e8&&dist[i]>md) md=dist[i];
+    const bw=M.x1-M.x0+1, bh=M.y1-M.y0+1, ox=(M.x0+M.x1+1)/2, oy=(M.y0+M.y1+1)/2, norm=2/Math.max(bw,bh);
     const pos=[],col=[],rnd=[]; const keep=Math.min(1,S.density), col0=new THREE.Color(S.uniformColor);
     const put=(x,y,t)=>{ const ld=S.depth*(1-S.thickness+S.thickness*t);
-      pos.push((x-cw/2+(Math.random()-.5))*norm, -(y-ch/2+(Math.random()-.5))*norm, (Math.random()-.5)*Math.max(0.04,ld));
+      pos.push((x-ox+(Math.random()-.5))*norm, -(y-oy+(Math.random()-.5))*norm, (Math.random()-.5)*Math.max(0.04,ld));
       const i=(y*cw+x)*4; if(S.useSvgColor) col.push(data[i]/255,data[i+1]/255,data[i+2]/255); else col.push(col0.r,col0.g,col0.b);
       rnd.push(Math.random()); };
-    for(let y=0;y<ch;y++)for(let x=0;x<cw;x++){ const i=(y*cw+x)*4;
-      if(data[i+3]<=40||Math.random()>keep) continue;
-      const t=Math.min(1,dist[y*cw+x]/md); put(x,y,t);
+    for(let y=M.y0;y<=M.y1;y++)for(let x=M.x0;x<=M.x1;x++){ const p=y*cw+x;
+      if(!M.mask[p]) continue;
+      const wc=bg?0.3+0.7*Math.sqrt(M.con[p]/M.mc):1;
+      if(Math.random()>keep*wc) continue;
+      const t=Math.min(1,dist[p]/md); put(x,y,t);
       if(Math.random()<S.thickness*t) put(x,y,t);
     }
     const g=points.geometry;
     g.setAttribute("position",new THREE.BufferAttribute(new Float32Array(pos),3));
     g.setAttribute("aColor",new THREE.BufferAttribute(new Float32Array(col),3));
     g.setAttribute("aRand",new THREE.BufferAttribute(new Float32Array(rnd),1));
-    pick.scale.set(cw*norm*1.6, ch*norm*1.6, 1);
+    pick.scale.set(bw*norm*1.6, bh*norm*1.6, 1);
   };
   img.src=url;
 }
