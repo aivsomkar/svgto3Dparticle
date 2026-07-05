@@ -335,7 +335,6 @@ button:focus-visible, input:focus-visible {
   border: 1px dashed rgba(255, 255, 255, 0.4); border-radius: 22px;
   padding: 44px 60px; text-align: center; font-size: 16px;
 }
-.drop-icon { font-size: 34px; margin-bottom: 12px; color: var(--text-dim); }
 
 /* ================= modal ================= */
 .modal {

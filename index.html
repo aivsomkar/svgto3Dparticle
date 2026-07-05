@@ -22,9 +22,9 @@
       </div>
       <div class="top-right">
         <span id="fps" class="chip glass fps" title="frames per second">60 fps</span>
-        <button id="change-dim" class="chip glass" title="Toggle perspective / orthographic camera">⬒ <span id="cam-label">Perspective</span></button>
-        <button id="shuffle" class="chip glass" title="Randomize the composition">🎲</button>
-        <button id="goto-export" class="btn-white">⬇ Export</button>
+        <button id="change-dim" class="chip glass" title="Toggle perspective / orthographic camera"><span id="cam-label">Perspective</span></button>
+        <button id="shuffle" class="chip glass" title="Randomize the composition">Shuffle</button>
+        <button id="goto-export" class="btn-white">Export</button>
       </div>
     </header>
 
@@ -34,7 +34,7 @@
         <div class="sec-label">Subject</div>
         <div class="btn-grid cols-3" id="subject-pills"></div>
         <button id="subject-more" class="btn-more" aria-expanded="false">Show more</button>
-        <label class="upload-btn">↑ Upload SVG
+        <label class="upload-btn">Upload SVG
           <input id="file-input" type="file" accept=".svg,image/svg+xml" hidden />
         </label>
         <input id="text-input" class="text-input" type="text" placeholder="or type text → 3d…" aria-label="Text to convert to 3D" />
@@ -129,7 +129,7 @@
     <div id="toasts" class="toasts" aria-live="polite"></div>
 
     <div id="drop-overlay" class="drop-overlay hidden">
-      <div class="drop-card glass"><div class="drop-icon">⬇</div>Drop an SVG to forge it into particles</div>
+      <div class="drop-card glass">Drop an SVG to forge it into particles</div>
     </div>
 
     <div id="embed-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Embed code">

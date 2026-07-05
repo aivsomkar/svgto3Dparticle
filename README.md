@@ -43,8 +43,8 @@ wave direction is Radial / Horizontal / Vertical / Diagonal. Export offers
 FPS, loop seconds, rotations/loop, WebM seconds, resolution (512 → 4K), and a
 transparent toggle. Drag-and-drop an SVG *anywhere*.
 
-Top bar: the camera chip toggles perspective ↔ orthographic, 🎲 shuffles the
-composition, **Export** jumps to the render controls. Drag to orbit; **Reset
+Top bar: the camera chip toggles perspective ↔ orthographic, **Shuffle**
+randomizes the composition, **Export** opens the render controls. Drag to orbit; **Reset
 camera** recenters.
 
 ## Displacement is depth-only
